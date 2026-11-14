@@ -1,3 +1,4 @@
+import type { FlameColorPalette } from '../config/flameColors';
 import type { FlamePresetLevel } from '../types/flame';
 
 export type IgnitionStatus =
@@ -26,6 +27,8 @@ export interface SharedEngineState {
   flameHeight: number; // target 0..1
   flameIntensity: number; // target 0..1
   flamePreset: FlamePresetLevel;
+  flameColorId: string;
+  customFlamePalette?: FlameColorPalette;
   autoIntervalSec: number;
   sparkSpeed: number;
   lastUpdatedAt: number;

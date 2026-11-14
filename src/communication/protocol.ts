@@ -1,3 +1,4 @@
+import type { FlameColorPalette } from '../config/flameColors';
 import type { FlamePresetLevel } from '../types/flame';
 import type { SharedEngineState } from '../types/engine';
 
@@ -13,6 +14,7 @@ export type SyncMessageType =
   | 'SET_FLAME_LEVEL'
   | 'SET_FLAME_HEIGHT'
   | 'SET_FLAME_INTENSITY'
+  | 'SET_FLAME_COLOR'
   | 'SET_SPARK_SETTINGS'
   | 'FULL_FLAME'
   | 'PAUSE'
@@ -59,6 +61,10 @@ export type SyncMessage =
   | BaseSyncMessage<'SET_FLAME_LEVEL', { level: Exclude<FlamePresetLevel, 'OFF'> }>
   | BaseSyncMessage<'SET_FLAME_HEIGHT', { height: number }>
   | BaseSyncMessage<'SET_FLAME_INTENSITY', { intensity: number }>
+  | BaseSyncMessage<
+      'SET_FLAME_COLOR',
+      { paletteId: string; customPalette?: FlameColorPalette }
+    >
   | BaseSyncMessage<
       'SET_SPARK_SETTINGS',
       { requiredSparks?: number; autoIntervalSec?: number; sparkSpeed?: number }

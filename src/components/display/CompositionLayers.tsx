@@ -55,7 +55,11 @@ export function CompositionLayers({ controller, createSparkId }: CompositionLaye
   return (
     <group>
       <LampBackLayer plane={lampPlane} />
-      <LampInteriorGlow plane={lampPlane} flameIntensityRef={flameIntensityRef} />
+      <LampInteriorGlow
+        plane={lampPlane}
+        flameIntensityRef={flameIntensityRef}
+        glowColor={controller.flame.getColorPalette().lampGlow}
+      />
       <FlameRenderer plane={lampPlane} controller={controller} />
       <SparkRenderer controller={controller} />
       <ImpactEffects controller={controller} />

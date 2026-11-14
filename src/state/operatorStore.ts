@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createInitialEngineState } from '../config/defaults';
+import type { FlameColorPalette } from '../config/flameColors';
 import {
   clamp01,
   clampAutoInterval,
@@ -36,6 +37,7 @@ interface OperatorStoreState {
   setLocalFlamePreset: (level: Exclude<FlamePresetLevel, 'OFF'>) => void;
   setLocalFlameHeight: (height: number) => void;
   setLocalFlameIntensity: (intensity: number) => void;
+  setLocalFlameColor: (paletteId: string, customPalette?: FlameColorPalette) => void;
   setLocalAutoActive: (active: boolean) => void;
   setLocalPaused: (paused: boolean) => void;
   resetLocal: (nextCycleId: number) => void;
@@ -158,6 +160,16 @@ export const useOperatorStore = create<OperatorStoreState>((set) => ({
         ...prev.engineState,
         flameIntensity: clamp01(intensity),
         flamePreset: 'OFF',
+        lastUpdatedAt: Date.now(),
+      },
+    })),
+
+  setLocalFlameColor: (paletteId, customPalette) =>
+    set((prev) => ({
+      engineState: {
+        ...prev.engineState,
+        flameColorId: paletteId,
+        customFlamePalette: paletteId === 'custom' ? customPalette : undefined,
         lastUpdatedAt: Date.now(),
       },
     })),

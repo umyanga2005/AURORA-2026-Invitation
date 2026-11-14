@@ -79,6 +79,10 @@ export function attachDisplaySync(controller: ProgressiveIgnitionController) {
         controller.setFlameIntensity(msg.payload.intensity);
         break;
 
+      case 'SET_FLAME_COLOR':
+        controller.setFlameColor(msg.payload.paletteId, msg.payload.customPalette);
+        break;
+
       case 'SET_SPARK_SETTINGS':
         controller.updateSparkSettings(msg.payload);
         break;

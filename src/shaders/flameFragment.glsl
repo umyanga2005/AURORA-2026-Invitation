@@ -4,6 +4,12 @@ uniform float uIntensity;
 uniform float uLayerSeed;
 uniform float uLayerAlpha;
 
+uniform vec3 uColGlow;
+uniform vec3 uColOuter;
+uniform vec3 uColMid;
+uniform vec3 uColInner;
+uniform vec3 uColCore;
+
 varying vec2 vUv;
 
 // 2D hash & gradient-like value noise
@@ -104,18 +110,12 @@ void main() {
   float coreHotspot = exp(-dx * dx * 2.8) * (1.0 - smoothstep(0.05, 0.65, y)) * uIntensity;
   temp += coreHotspot * 0.38;
 
-  // Photographic fire colour ramp
-  vec3 colGlow   = vec3(0.75, 0.20, 0.02); // Soft warm orange
-  vec3 colOuter  = vec3(0.95, 0.26, 0.02); // Red-orange
-  vec3 colMid    = vec3(1.00, 0.54, 0.07); // Yellow-orange
-  vec3 colInner  = vec3(1.00, 0.84, 0.24); // Luminous golden yellow
-  vec3 colCore   = vec3(1.00, 0.98, 0.86); // Bright white-yellow
-
-  vec3 color = colGlow;
-  color = mix(color, colOuter, smoothstep(0.10, 0.35, temp));
-  color = mix(color, colMid,   smoothstep(0.35, 0.65, temp));
-  color = mix(color, colInner, smoothstep(0.62, 0.92, temp));
-  color = mix(color, colCore,  smoothstep(0.88, 1.22, temp));
+  // Color ramp based on temperature
+  vec3 color = uColGlow;
+  color = mix(color, uColOuter, smoothstep(0.10, 0.35, temp));
+  color = mix(color, uColMid,   smoothstep(0.35, 0.65, temp));
+  color = mix(color, uColInner, smoothstep(0.62, 0.92, temp));
+  color = mix(color, uColCore,  smoothstep(0.88, 1.22, temp));
 
   // Controlled emissive multiplier (keeps bloom rich without blowing out gold)
   float energy = (0.65 + 1.15 * uIntensity) * uLayerAlpha;

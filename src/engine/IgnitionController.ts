@@ -4,6 +4,7 @@ import {
   DEFAULT_SPARK_SPEED,
   FULL_FLAME_TRANSITION_SEC,
 } from '../config/defaults';
+import { getFlamePalette, type FlameColorPalette } from '../config/flameColors';
 import {
   clamp01,
   clampAutoInterval,
@@ -162,6 +163,12 @@ export class ProgressiveIgnitionController {
     this.emitState();
   }
 
+  public setFlameColor(paletteId: string, customPalette?: FlameColorPalette): void {
+    const palette = getFlamePalette(paletteId, customPalette);
+    this.flame.setColorPalette(palette);
+    this.emitState();
+  }
+
   public triggerFullFlame(durationSec = FULL_FLAME_TRANSITION_SEC): void {
     this.autoActive = false;
     this.autoAccumulator = 0;
@@ -221,6 +228,10 @@ export class ProgressiveIgnitionController {
     this.clock.setPaused(snapshot.paused);
     this.stateMachine.setStatus(snapshot.status);
     this.flame.setTargets(snapshot.flameHeight, snapshot.flameIntensity);
+    if (snapshot.flameColorId) {
+      const palette = getFlamePalette(snapshot.flameColorId, snapshot.customFlamePalette);
+      this.flame.setColorPalette(palette);
+    }
     this.sparks.clearAll();
     this.seenImpactIds.clear();
   }
@@ -297,6 +308,9 @@ export class ProgressiveIgnitionController {
       flameHeight: flameState.targetHeight,
       flameIntensity: flameState.targetIntensity,
       flamePreset: flameState.activePreset,
+      flameColorId: flameState.colorPalette.id,
+      customFlamePalette:
+        flameState.colorPalette.id === 'custom' ? flameState.colorPalette : undefined,
       autoIntervalSec: this.autoIntervalSec,
       sparkSpeed: this.sparkSpeed,
       lastUpdatedAt: Date.now(),

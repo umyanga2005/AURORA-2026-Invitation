@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createEventId, createSyncMessage } from '../../communication/protocol';
 import { createOperatorSyncClient } from '../../communication/synchronization';
 import { FULL_FLAME_TRANSITION_SEC } from '../../config/defaults';
+import type { FlameColorPalette } from '../../config/flameColors';
 import {
   clamp01,
   clampAutoInterval,
@@ -196,6 +197,20 @@ export function ControlDashboard() {
     );
   }, []);
 
+  const handleSelectColor = useCallback(
+    (paletteId: string, customPalette?: FlameColorPalette) => {
+      const store = useOperatorStore.getState();
+      store.setLocalFlameColor(paletteId, customPalette);
+      clientRef.current?.channel.send(
+        createSyncMessage('SET_FLAME_COLOR', 'operator', store.engineState.cycleId, {
+          paletteId,
+          customPalette,
+        })
+      );
+    },
+    []
+  );
+
   const handleOpenDisplay = useCallback(() => {
     setFullscreenNote(null);
     if (displayWindowRef.current && !displayWindowRef.current.closed) {
@@ -290,6 +305,7 @@ export function ControlDashboard() {
               onChangeHeight={handleChangeHeight}
               onChangeIntensity={handleChangeIntensity}
               onStepFlame={handleStepFlame}
+              onSelectColor={handleSelectColor}
             />
             <SparkSettings
               state={engineState}

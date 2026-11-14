@@ -1,4 +1,5 @@
 import { FLAME_PRESETS, FULL_FLAME_TRANSITION_SEC } from '../config/defaults';
+import { DEFAULT_FLAME_COLOR_ID, getFlamePalette, type FlameColorPalette } from '../config/flameColors';
 import { clamp01 } from '../config/validation';
 import type { FlameParameters, FlamePresetLevel } from '../types/flame';
 
@@ -8,7 +9,16 @@ export class FlameEngine {
   private currentHeight = 0;
   private currentIntensity = 0;
   private activePreset: FlamePresetLevel = 'OFF';
+  private colorPalette: FlameColorPalette = getFlamePalette(DEFAULT_FLAME_COLOR_ID);
   private smoothingRate = 3.2;
+
+  public setColorPalette(palette: FlameColorPalette): void {
+    this.colorPalette = palette;
+  }
+
+  public getColorPalette(): FlameColorPalette {
+    return this.colorPalette;
+  }
 
   public setTargets(height: number, intensity: number, smoothingRate = 3.2): void {
     this.targetHeight = clamp01(height);
@@ -82,6 +92,7 @@ export class FlameEngine {
       currentHeight: this.currentHeight,
       currentIntensity: this.currentIntensity,
       activePreset: this.activePreset,
+      colorPalette: this.colorPalette,
     };
   }
 
@@ -92,6 +103,7 @@ export class FlameEngine {
       currentHeight: this.currentHeight,
       currentIntensity: this.currentIntensity,
       activePreset: this.activePreset,
+      colorPalette: this.colorPalette,
     };
   }
 

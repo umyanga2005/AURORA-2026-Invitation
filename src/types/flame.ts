@@ -1,3 +1,5 @@
+import type { FlameColorPalette } from '../config/flameColors';
+
 export type FlamePresetLevel = 'OFF' | 'LOW' | 'MEDIUM' | 'HIGH' | 'FULL';
 
 export interface FlameParameters {
@@ -11,6 +13,8 @@ export interface FlameParameters {
   currentIntensity: number;
   /** Selected preset if matching */
   activePreset: FlamePresetLevel;
+  /** Current active flame color palette */
+  colorPalette: FlameColorPalette;
 }
 
 export interface FlamePresetConfig {
@@ -19,3 +23,4 @@ export interface FlamePresetConfig {
   height: number;
   intensity: number;
 }
+

@@ -1,5 +1,6 @@
 import type { FlamePresetConfig } from '../types/flame';
 import type { SharedEngineState } from '../types/engine';
+import { DEFAULT_FLAME_COLOR_ID } from './flameColors';
 
 export const DEFAULT_REQUIRED_SPARKS = 20;
 export const MIN_REQUIRED_SPARKS = 1;
@@ -37,6 +38,7 @@ export function createInitialEngineState(cycleId = 1): SharedEngineState {
     flameHeight: 0,
     flameIntensity: 0,
     flamePreset: 'OFF',
+    flameColorId: DEFAULT_FLAME_COLOR_ID,
     autoIntervalSec: DEFAULT_AUTO_INTERVAL_SEC,
     sparkSpeed: DEFAULT_SPARK_SPEED,
     lastUpdatedAt: Date.now(),

@@ -9,6 +9,10 @@ interface LampLayerProps {
   flameIntensityRef?: React.MutableRefObject<number>;
 }
 
+interface LampInteriorGlowProps extends LampLayerProps {
+  glowColor?: [number, number, number];
+}
+
 const FRONT_MASK_VERTEX = `
 varying vec2 vUv;
 void main() {
@@ -34,15 +38,15 @@ void main() {
 const INTERIOR_GLOW_FRAGMENT = `
 uniform sampler2D uOpeningMask;
 uniform float uIntensity;
+uniform vec3 uGlowColor;
 varying vec2 vUv;
 
 void main() {
   if (uIntensity <= 0.005) discard;
   float mask = texture2D(uOpeningMask, vUv).r;
   if (mask < 0.01) discard;
-  vec3 warmGlow = vec3(1.0, 0.58, 0.12);
   float alpha = mask * uIntensity * 0.42;
-  gl_FragColor = vec4(warmGlow * alpha, alpha);
+  gl_FragColor = vec4(uGlowColor * alpha, alpha);
 }
 `;
 
@@ -73,7 +77,7 @@ export function LampBackLayer({ plane }: LampLayerProps) {
 /**
  * Renders subtle warm firelight inside the bowl opening when lit.
  */
-export function LampInteriorGlow({ plane, flameIntensityRef }: LampLayerProps) {
+export function LampInteriorGlow({ plane, flameIntensityRef, glowColor }: LampInteriorGlowProps) {
   const openingMask = useTexture(LAMP_MASK_PATHS.bowlOpening);
 
   const material = useMemo(() => {
@@ -83,12 +87,19 @@ export function LampInteriorGlow({ plane, flameIntensityRef }: LampLayerProps) {
       uniforms: {
         uOpeningMask: { value: openingMask },
         uIntensity: { value: 0 },
+        uGlowColor: { value: new THREE.Color(1.0, 0.58, 0.12) },
       },
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
   }, [openingMask]);
+
+  useEffect(() => {
+    if (glowColor) {
+      material.uniforms.uGlowColor.value.setRGB(glowColor[0], glowColor[1], glowColor[2]);
+    }
+  }, [glowColor, material]);
 
   useEffect(() => {
     return () => {

@@ -43,6 +43,7 @@ export function FlameRenderer({ plane, controller }: FlameRendererProps) {
   const maxFlameHeight = plane.height * 1.6;
 
   const materials = useMemo(() => {
+    const pal = controller.flame.getColorPalette();
     return FLAME_LAYERS.map(
       (layer) =>
         new THREE.ShaderMaterial({
@@ -54,13 +55,18 @@ export function FlameRenderer({ plane, controller }: FlameRendererProps) {
             uIntensity: { value: 0 },
             uLayerSeed: { value: layer.seed },
             uLayerAlpha: { value: layer.alpha },
+            uColGlow: { value: new THREE.Color(...pal.glow) },
+            uColOuter: { value: new THREE.Color(...pal.outer) },
+            uColMid: { value: new THREE.Color(...pal.mid) },
+            uColInner: { value: new THREE.Color(...pal.inner) },
+            uColCore: { value: new THREE.Color(...pal.core) },
           },
           transparent: true,
           depthWrite: false,
           blending: THREE.AdditiveBlending,
         })
     );
-  }, []);
+  }, [controller]);
 
   useEffect(() => {
     return () => {
@@ -71,10 +77,16 @@ export function FlameRenderer({ plane, controller }: FlameRendererProps) {
   useFrame(() => {
     const elapsed = controller.clock.getElapsed();
     const flameState = controller.flame.getState();
+    const pal = flameState.colorPalette;
     for (const mat of materials) {
       mat.uniforms.uTime.value = elapsed;
       mat.uniforms.uHeight.value = flameState.currentHeight;
       mat.uniforms.uIntensity.value = flameState.currentIntensity;
+      mat.uniforms.uColGlow.value.setRGB(pal.glow[0], pal.glow[1], pal.glow[2]);
+      mat.uniforms.uColOuter.value.setRGB(pal.outer[0], pal.outer[1], pal.outer[2]);
+      mat.uniforms.uColMid.value.setRGB(pal.mid[0], pal.mid[1], pal.mid[2]);
+      mat.uniforms.uColInner.value.setRGB(pal.inner[0], pal.inner[1], pal.inner[2]);
+      mat.uniforms.uColCore.value.setRGB(pal.core[0], pal.core[1], pal.core[2]);
     }
   });
 
