@@ -1,0 +1,14 @@
+.display-root {
+  width: 100vw;
+  height: 100vh;
+  background: #000000;
+  overflow: hidden;
+  user-select: none;
+  cursor: none;
+}
+
+.display-root canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
