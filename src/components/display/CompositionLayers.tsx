@@ -28,18 +28,37 @@ export function CompositionLayers({
   const lampGroupRef = useRef<THREE.Group>(null);
   const lampSlideOffsetRef = useRef(0);
 
-  // Responsive lamp placement in lower-centre area, preserving 1536:1024 aspect ratio
-  // while leaving generous vertical space above the bowl for the flame & logo writing.
+  // Responsive lamp placement preserving 1536:1024 aspect ratio across
+  // Desktop, Tablet Landscape, Tablet Portrait, Mobile Portrait, and Mobile Landscape
   const lampPlane: PlaneTransform = useMemo(() => {
     const aspect = LAMP_METADATA.aspectRatio;
     const isPortrait = viewport.height > viewport.width;
-    const maxHeightByViewport = viewport.height * (isPortrait ? 0.36 : 0.44);
-    const maxWidthByViewport = viewport.width * (isPortrait ? 0.86 : 0.56);
+    const isVeryShortLandscape = !isPortrait && viewport.height / Math.max(viewport.width, 0.01) < 0.52;
+    const isTabletPortrait = isPortrait && viewport.width / Math.max(viewport.height, 0.01) > 0.58;
+
+    const maxHeightByViewport = viewport.height * (
+      isTabletPortrait ? 0.34 :
+      isPortrait ? 0.35 :
+      isVeryShortLandscape ? 0.52 :
+      0.42
+    );
+    const maxWidthByViewport = viewport.width * (
+      isTabletPortrait ? 0.68 :
+      isPortrait ? 0.84 :
+      isVeryShortLandscape ? 0.44 :
+      0.54
+    );
+
     const width = Math.min(maxWidthByViewport, maxHeightByViewport * aspect);
     const height = width / aspect;
 
     // Position in lower-centre so the bowl sits cleanly below the writing area
-    const centerY = -viewport.height * (isPortrait ? 0.24 : 0.30);
+    const centerY = -viewport.height * (
+      isTabletPortrait ? 0.25 :
+      isPortrait ? 0.24 :
+      isVeryShortLandscape ? 0.22 :
+      0.30
+    );
 
     return {
       centerX: 0,

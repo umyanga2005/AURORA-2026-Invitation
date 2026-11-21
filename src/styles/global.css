@@ -1,3 +1,20 @@
+:root {
+  /* AURORA 2026 — Greek Royal Color System */
+  --bg-primary: #050505;
+  --bg-secondary: #0b0906;
+  --gold-champagne: #f4d58a;
+  --gold-metallic: #d6a64b;
+  --gold-antique: #a8792a;
+  --gold-highlight: #fff2c6;
+  --gold-atmospheric: #e9b65a;
+  --gold-muted: #96713b;
+
+  /* Typography */
+  --font-display: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
+  --font-serif-caps: 'Cinzel', Georgia, serif;
+  --font-editorial: 'Cormorant Garamond', Georgia, serif;
+}
+
 *,
 *::before,
 *::after {
@@ -11,8 +28,9 @@ body,
   padding: 0;
   width: 100%;
   height: 100%;
-  background: #000000;
+  background: var(--bg-primary);
   color: #f4efe6;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

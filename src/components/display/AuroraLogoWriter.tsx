@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import type { InvitationPhase } from '../../types/invitation';
 
 interface AuroraLogoWriterProps {
@@ -16,13 +17,23 @@ export function AuroraLogoWriter({
   onWriteTick,
   onLogoWriteComplete,
 }: AuroraLogoWriterProps) {
-  const mainChars = useMemo(() => Array.from((logoMain || 'AURORA').trim()), [logoMain]);
-  const subChars = useMemo(() => Array.from((logoSub || 'MMXXVI').trim()), [logoSub]);
+  const reducedMotion = useReducedMotion();
+  const normalizedMain = (logoMain || 'AURORA').trim();
+  const normalizedSub = (logoSub || 'MMXXVI').trim();
 
+  const mainChars = useMemo(() => Array.from(normalizedMain), [normalizedMain]);
+  const subChars = useMemo(() => Array.from(normalizedSub), [normalizedSub]);
+
+  // Use the polished 3D metallic gold artwork in Stage 4/5 when displaying the default AURORA MMXXVI emblem
+  const canUseMetallicArtwork =
+    normalizedMain.toUpperCase() === 'AURORA' && normalizedSub.toUpperCase() === 'MMXXVI';
+
+  const [showTopOrnament, setShowTopOrnament] = useState(false);
   const [mainCount, setMainCount] = useState(0);
   const [subCount, setSubCount] = useState(0);
-  const [showTopOrnament, setShowTopOrnament] = useState(false);
   const [showBottomOrnament, setShowBottomOrnament] = useState(false);
+  const [artworkRevealed, setArtworkRevealed] = useState(false);
+  const [artworkLoaded, setArtworkLoaded] = useState(false);
 
   const isVisible =
     phase === 'WRITING_LOGO' ||
@@ -37,19 +48,28 @@ export function AuroraLogoWriter({
 
   useEffect(() => {
     if (phase === 'EXTINGUISHED' || phase === 'IGNITING') {
+      setShowTopOrnament(false);
       setMainCount(0);
       setSubCount(0);
-      setShowTopOrnament(false);
       setShowBottomOrnament(false);
+      setArtworkRevealed(false);
       return;
     }
 
-    if (phase !== 'WRITING_LOGO') {
-      // Ensure everything stays 100% visible in subsequent phases
+    if (reducedMotion || phase !== 'WRITING_LOGO') {
+      setShowTopOrnament(true);
       setMainCount(mainChars.length);
       setSubCount(subChars.length);
-      setShowTopOrnament(true);
       setShowBottomOrnament(true);
+      if (canUseMetallicArtwork) {
+        setArtworkRevealed(true);
+      }
+      if (reducedMotion && phase === 'WRITING_LOGO') {
+        const quickId = window.setTimeout(() => {
+          onLogoWriteComplete?.();
+        }, 120);
+        return () => window.clearTimeout(quickId);
+      }
       return;
     }
 
@@ -65,39 +85,50 @@ export function AuroraLogoWriter({
 
     let t = 120;
 
-    // 1. Write main title letter-by-letter ("A U R O R A")
+    // STAGE 2 — Lightning symbol & upper laurel decorations appear first in restrained gold
+    schedule(() => {
+      setShowTopOrnament(true);
+      onWriteTick?.();
+    }, t);
+    t += 520;
+
+    // STAGE 3 — SVG letter writing for AURORA
     mainChars.forEach((_, idx) => {
       schedule(() => {
         setMainCount(idx + 1);
         onWriteTick?.();
       }, t);
-      t += 310;
+      t += 260;
     });
 
-    // 2. Draw top lightning bolt & laurel branches
-    schedule(() => {
-      setShowTopOrnament(true);
-      onWriteTick?.();
-    }, t + 60);
-    t += 480;
-
-    // 3. Write subtitle letter-by-letter ("M M X X V I")
+    // Write subtitle MMXXVI
+    t += 120;
     subChars.forEach((_, idx) => {
       schedule(() => {
         setSubCount(idx + 1);
         onWriteTick?.();
       }, t);
-      t += 190;
+      t += 160;
     });
 
-    // 4. Draw lower laurel cradle
+    // Draw lower laurel cradle
     schedule(() => {
       setShowBottomOrnament(true);
       onWriteTick?.();
-    }, t + 80);
-    t += 950;
+    }, t + 60);
+    t += 780;
 
-    // 5. Notify completion so lamp glides down & logo glides up
+    // STAGE 4 — Smooth transformation into polished 3D metallic gold artwork
+    if (canUseMetallicArtwork) {
+      schedule(() => {
+        setArtworkRevealed(true);
+      }, t);
+      t += 920;
+    } else {
+      t += 300;
+    }
+
+    // STAGE 5 — Complete & proceed to docked header layout
     schedule(() => {
       onLogoWriteComplete?.();
     }, t);
@@ -106,227 +137,252 @@ export function AuroraLogoWriter({
       cancelled = true;
       timers.forEach((id) => window.clearTimeout(id));
     };
-  }, [phase, mainChars, subChars, onWriteTick, onLogoWriteComplete]);
+  }, [
+    phase,
+    reducedMotion,
+    mainChars,
+    subChars,
+    canUseMetallicArtwork,
+    onWriteTick,
+    onLogoWriteComplete,
+  ]);
 
   if (!isVisible) return null;
 
+  const showFinalPng = canUseMetallicArtwork && artworkRevealed && artworkLoaded;
+
   return (
     <div
-      className={`aurora-logo-stage ${isDockedTop ? 'aurora-logo-docked-top' : 'aurora-logo-center'}`}
-      aria-label={`${logoMain} ${logoSub}`}
+      className={`aurora-logo-stage ${isDockedTop ? 'aurora-logo-docked' : 'aurora-logo-writing'}`}
+      aria-label={`${normalizedMain} ${normalizedSub}`}
     >
-      <svg
-        className="aurora-logo-svg"
-        viewBox="0 0 860 360"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <defs>
-          {/* Fire-mixed metallic gold gradient */}
-          <linearGradient id="fireGoldFill" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#fff7c2" />
-            <stop offset="22%" stopColor="#f8cf63" />
-            <stop offset="48%" stopColor="#ff9a2e" />
-            <stop offset="72%" stopColor="#f5c24c" />
-            <stop offset="100%" stopColor="#c77d1c" />
-          </linearGradient>
-
-          <linearGradient id="fireGoldStroke" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#ff8c1a" />
-            <stop offset="50%" stopColor="#fff5b8" />
-            <stop offset="100%" stopColor="#ff7b00" />
-          </linearGradient>
-
-          <filter id="fireGoldGlow" x="-25%" y="-25%" width="150%" height="150%">
-            <feGaussianBlur stdDeviation="3.5" result="blur1" />
-            <feGaussianBlur stdDeviation="9" result="blur2" />
-            <feMerge>
-              <feMergeNode in="blur2" />
-              <feMergeNode in="blur1" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
-        {/* TOP ORNAMENTS: Center Lightning Bolt, Upper Laurels & Top Horizontal Accents */}
-        <g
-          className={`logo-ornament-group ${showTopOrnament ? 'ornament-draw' : ''}`}
-          filter="url(#fireGoldGlow)"
+      <div className="aurora-logo-frame">
+        {/* SVG Writing Layer — cleanly fades out as 3D metallic artwork resolves (no duplicate lettering) */}
+        <svg
+          className={`aurora-logo-svg ${showFinalPng ? 'aurora-svg-resolved' : ''}`}
+          viewBox="0 0 1024 558"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden={showFinalPng}
         >
-          {/* Center Top Lightning Bolt */}
-          <path
-            className="logo-draw-path"
-            d="M446 20 L414 78 L434 78 L420 124 L456 64 L436 64 Z"
-            stroke="url(#fireGoldStroke)"
-            strokeWidth="2.5"
-            fill="url(#fireGoldFill)"
-          />
+          <defs>
+            {/* Clean Metallic Champagne-Antique Gold Fill (no fire/orange) */}
+            <linearGradient id="royalGoldFill" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#FFF2C6" />
+              <stop offset="28%" stopColor="#F4D58A" />
+              <stop offset="58%" stopColor="#D6A64B" />
+              <stop offset="86%" stopColor="#A8792A" />
+              <stop offset="100%" stopColor="#D6A64B" />
+            </linearGradient>
 
-          {/* Left Upper Laurel Stem & Leaves */}
-          <path
-            className="logo-draw-path"
-            d="M322 108 C338 82, 368 58, 404 48"
-            stroke="url(#fireGoldStroke)"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-          />
-          <path
-            className="logo-draw-path"
-            d="M336 92 Q325 76 340 66 Q348 80 336 92 Z M354 78 Q346 60 362 54 Q368 68 354 78 Z M375 64 Q370 46 386 44 Q389 58 375 64 Z M352 94 Q366 96 372 82 Q358 80 352 94 Z M374 79 Q388 80 393 66 Q380 65 374 79 Z"
-            stroke="url(#fireGoldStroke)"
-            strokeWidth="1.6"
-            fill="url(#fireGoldFill)"
-          />
+            {/* Fine Metallic Gold Writing Stroke */}
+            <linearGradient id="royalGoldStroke" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#A8792A" />
+              <stop offset="35%" stopColor="#F4D58A" />
+              <stop offset="50%" stopColor="#FFF2C6" />
+              <stop offset="65%" stopColor="#D6A64B" />
+              <stop offset="100%" stopColor="#A8792A" />
+            </linearGradient>
 
-          {/* Right Upper Laurel Stem & Leaves */}
-          <path
-            className="logo-draw-path"
-            d="M538 108 C522 82, 492 58, 456 48"
-            stroke="url(#fireGoldStroke)"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-          />
-          <path
-            className="logo-draw-path"
-            d="M524 92 Q535 76 520 66 Q512 80 524 92 Z M506 78 Q514 60 498 54 Q492 68 506 78 Z M485 64 Q490 46 474 44 Q471 58 485 64 Z M508 94 Q494 96 488 82 Q502 80 508 94 Z M486 79 Q472 80 467 66 Q480 65 486 79 Z"
-            stroke="url(#fireGoldStroke)"
-            strokeWidth="1.6"
-            fill="url(#fireGoldFill)"
-          />
+            {/* Restrained subtle warm gold aura */}
+            <filter id="royalGoldAura" x="-15%" y="-15%" width="130%" height="130%">
+              <feDropShadow
+                dx="0"
+                dy="2"
+                stdDeviation="3.5"
+                floodColor="#D6A64B"
+                floodOpacity="0.28"
+              />
+            </filter>
+          </defs>
 
-          {/* Top Horizontal Rules */}
-          <path
-            className="logo-draw-path"
-            d="M172 104 L306 104 M554 104 L688 104"
-            stroke="url(#fireGoldStroke)"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-          />
+          {/* STAGE 2: TOP LIGHTNING BOLT, UPPER LAURELS & ACCENT RULES */}
+          <g
+            className={`logo-ornament-group ${showTopOrnament ? 'ornament-draw' : ''}`}
+            filter="url(#royalGoldAura)"
+          >
+            {/* Center Top Lightning Symbol */}
+            <path
+              className="logo-draw-path"
+              d="M526 70 L492 138 L514 138 L498 188 L540 120 L518 120 Z"
+              stroke="url(#royalGoldStroke)"
+              strokeWidth="2.4"
+              fill="url(#royalGoldFill)"
+            />
 
-          {/* Small Side Lightning Accents */}
-          <path
-            className="logo-draw-path"
-            d="M204 122 L192 146 L201 146 L195 166 L211 140 L202 140 Z"
-            stroke="url(#fireGoldStroke)"
-            strokeWidth="1.4"
-            fill="url(#fireGoldFill)"
-          />
-          <path
-            className="logo-draw-path"
-            d="M656 122 L644 146 L653 146 L647 166 L663 140 L654 140 Z"
-            stroke="url(#fireGoldStroke)"
-            strokeWidth="1.4"
-            fill="url(#fireGoldFill)"
-          />
-        </g>
+            {/* Left Upper Laurel Branch */}
+            <path
+              className="logo-draw-path"
+              d="M380 176 C400 144, 434 118, 476 106"
+              stroke="url(#royalGoldStroke)"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+            <path
+              className="logo-draw-path"
+              d="M396 156 Q384 138 400 126 Q410 142 396 156 Z M418 140 Q408 120 426 112 Q434 128 418 140 Z M442 124 Q436 104 454 102 Q458 118 442 124 Z M414 158 Q430 160 438 144 Q422 142 414 158 Z M440 141 Q456 142 462 126 Q448 125 440 141 Z"
+              stroke="url(#royalGoldStroke)"
+              strokeWidth="1.5"
+              fill="url(#royalGoldFill)"
+            />
 
-        {/* MAIN TITLE WRITTEN LETTER-BY-LETTER ("AURORA") */}
-        <g filter="url(#fireGoldGlow)">
-          {mainChars.map((ch, index) => {
-            const written = index < mainCount;
-            if (!written) return null;
-            const total = mainChars.length;
-            const span = Math.min(620, total * 102);
-            const startX = 430 - span * 0.5 + span / (total * 2);
-            const x = startX + (span / total) * index;
+            {/* Right Upper Laurel Branch */}
+            <path
+              className="logo-draw-path"
+              d="M644 176 C624 144, 590 118, 548 106"
+              stroke="url(#royalGoldStroke)"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+            <path
+              className="logo-draw-path"
+              d="M628 156 Q640 138 624 126 Q614 142 628 156 Z M606 140 Q616 120 598 112 Q590 128 606 140 Z M582 124 Q588 104 570 102 Q566 118 582 124 Z M610 158 Q594 160 586 144 Q602 142 610 158 Z M584 141 Q568 142 562 126 Q576 125 584 141 Z"
+              stroke="url(#royalGoldStroke)"
+              strokeWidth="1.5"
+              fill="url(#royalGoldFill)"
+            />
 
-            return (
-              <g key={`main-${index}-${ch}`} className="logo-letter-write">
+            {/* Top Horizontal Accent Lines */}
+            <path
+              className="logo-draw-path"
+              d="M214 162 L362 162 M662 162 L810 162"
+              stroke="url(#royalGoldStroke)"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+
+            {/* Flanking Small Lightning Bolts */}
+            <path
+              className="logo-draw-path"
+              d="M250 182 L236 212 L247 212 L240 236 L259 204 L248 204 Z"
+              stroke="url(#royalGoldStroke)"
+              strokeWidth="1.4"
+              fill="url(#royalGoldFill)"
+            />
+            <path
+              className="logo-draw-path"
+              d="M774 182 L760 212 L771 212 L764 236 L783 204 L772 204 Z"
+              stroke="url(#royalGoldStroke)"
+              strokeWidth="1.4"
+              fill="url(#royalGoldFill)"
+            />
+          </g>
+
+          {/* STAGE 3: MAIN TITLE WRITTEN LETTER-BY-LETTER ("AURORA") */}
+          <g filter="url(#royalGoldAura)">
+            {mainChars.map((ch, index) => {
+              if (index >= mainCount) return null;
+              const total = mainChars.length;
+              const span = Math.min(730, total * 122);
+              const startX = 512 - span * 0.5 + span / (total * 2);
+              const x = startX + (span / total) * index;
+
+              return (
                 <text
+                  key={`main-${index}-${ch}`}
                   x={x}
-                  y="214"
+                  y="314"
                   textAnchor="middle"
                   className="aurora-main-letter"
-                  fill="url(#fireGoldFill)"
-                  stroke="url(#fireGoldStroke)"
-                  strokeWidth="2.2"
+                  fill="url(#royalGoldFill)"
+                  stroke="url(#royalGoldStroke)"
+                  strokeWidth="2"
                 >
                   {ch}
                 </text>
-              </g>
-            );
-          })}
-        </g>
+              );
+            })}
+          </g>
 
-        {/* SUBTITLE WRITTEN LETTER-BY-LETTER ("MMXXVI") */}
-        <g filter="url(#fireGoldGlow)">
-          {subChars.map((ch, index) => {
-            const written = index < subCount;
-            if (!written) return null;
-            const total = subChars.length;
-            const span = Math.min(340, total * 52);
-            const startX = 430 - span * 0.5 + span / (total * 2);
-            const x = startX + (span / total) * index;
+          {/* SUBTITLE WRITTEN LETTER-BY-LETTER ("MMXXVI") */}
+          <g filter="url(#royalGoldAura)">
+            {subChars.map((ch, index) => {
+              if (index >= subCount) return null;
+              const total = subChars.length;
+              const span = Math.min(410, total * 64);
+              const startX = 512 - span * 0.5 + span / (total * 2);
+              const x = startX + (span / total) * index;
 
-            return (
-              <g key={`sub-${index}-${ch}`} className="logo-letter-write">
+              return (
                 <text
+                  key={`sub-${index}-${ch}`}
                   x={x}
-                  y="294"
+                  y="424"
                   textAnchor="middle"
                   className="aurora-sub-letter"
-                  fill="url(#fireGoldFill)"
-                  stroke="url(#fireGoldStroke)"
-                  strokeWidth="1.2"
+                  fill="url(#royalGoldFill)"
+                  stroke="url(#royalGoldStroke)"
+                  strokeWidth="1.15"
                 >
                   {ch}
                 </text>
-              </g>
-            );
-          })}
-        </g>
+              );
+            })}
+          </g>
 
-        {/* BOTTOM ORNAMENTS: Mid Dividers + Lower Sweeping Cradle & Laurels */}
-        <g
-          className={`logo-ornament-group ${showBottomOrnament ? 'ornament-draw' : ''}`}
-          filter="url(#fireGoldGlow)"
-        >
-          {/* Mid Horizontal Accents */}
-          <path
-            className="logo-draw-path"
-            d="M238 236 L396 236 M464 236 L622 236"
-            stroke="url(#fireGoldStroke)"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-          />
+          {/* LOWER SWEEPING CRADLE & LAUREL WREATHS */}
+          <g
+            className={`logo-ornament-group ${showBottomOrnament ? 'ornament-draw' : ''}`}
+            filter="url(#royalGoldAura)"
+          >
+            {/* Mid Horizontal Accents */}
+            <path
+              className="logo-draw-path"
+              d="M294 342 L472 342 M552 342 L730 342"
+              stroke="url(#royalGoldStroke)"
+              strokeWidth="2.1"
+              strokeLinecap="round"
+            />
 
-          {/* Lower Sweeping Golden Cradle */}
-          <path
-            className="logo-draw-path"
-            d="M118 228 C158 262, 206 312, 272 316 L392 316 C414 316, 424 326, 430 340 C436 326, 446 316, 468 316 L588 316 C654 312, 702 262, 742 228"
-            stroke="url(#fireGoldStroke)"
-            strokeWidth="2.8"
-            strokeLinecap="round"
-          />
+            {/* Lower Sweeping Golden Cradle */}
+            <path
+              className="logo-draw-path"
+              d="M150 338 C198 380, 254 446, 332 452 L468 452 C494 452, 505 466, 512 486 C519 466, 530 452, 556 452 L692 452 C770 446, 826 380, 874 338"
+              stroke="url(#royalGoldStroke)"
+              strokeWidth="2.8"
+              strokeLinecap="round"
+            />
 
-          {/* Left Lower Laurel Leaves */}
-          <path
-            className="logo-draw-path"
-            d="M142 246 Q128 236 138 224 Q152 232 142 246 Z M168 268 Q154 256 164 244 Q178 254 168 268 Z M198 288 Q186 274 198 264 Q210 274 198 288 Z M230 304 Q220 290 234 282 Q244 294 230 304 Z"
-            stroke="url(#fireGoldStroke)"
-            strokeWidth="1.5"
-            fill="url(#fireGoldFill)"
-          />
+            {/* Left Lower Laurels */}
+            <path
+              className="logo-draw-path"
+              d="M180 362 Q164 350 176 334 Q192 344 180 362 Z M212 390 Q196 376 208 360 Q224 372 212 390 Z M248 416 Q234 400 248 386 Q262 400 248 416 Z M286 436 Q274 420 290 410 Q302 424 286 436 Z"
+              stroke="url(#royalGoldStroke)"
+              strokeWidth="1.4"
+              fill="url(#royalGoldFill)"
+            />
 
-          {/* Right Lower Laurel Leaves */}
-          <path
-            className="logo-draw-path"
-            d="M718 246 Q732 236 722 224 Q708 232 718 246 Z M692 268 Q706 256 696 244 Q682 254 692 268 Z M662 288 Q674 274 662 264 Q650 274 662 288 Z M630 304 Q640 290 626 282 Q616 294 630 304 Z"
-            stroke="url(#fireGoldStroke)"
-            strokeWidth="1.5"
-            fill="url(#fireGoldFill)"
-          />
+            {/* Right Lower Laurels */}
+            <path
+              className="logo-draw-path"
+              d="M844 362 Q860 350 848 334 Q832 344 844 362 Z M812 390 Q828 376 816 360 Q800 372 812 390 Z M776 416 Q790 400 776 386 Q762 400 776 416 Z M738 436 Q750 420 734 410 Q722 424 738 436 Z"
+              stroke="url(#royalGoldStroke)"
+              strokeWidth="1.4"
+              fill="url(#royalGoldFill)"
+            />
 
-          {/* Bottom Center Flourish */}
-          <path
-            className="logo-draw-path"
-            d="M430 344 L424 330 L430 322 L436 330 Z"
-            stroke="url(#fireGoldStroke)"
-            strokeWidth="1.4"
-            fill="url(#fireGoldFill)"
+            {/* Bottom Center Flourish */}
+            <path
+              className="logo-draw-path"
+              d="M512 492 L505 474 L512 462 L519 474 Z"
+              stroke="url(#royalGoldStroke)"
+              strokeWidth="1.4"
+              fill="url(#royalGoldFill)"
+            />
+          </g>
+        </svg>
+
+        {/* STAGE 4 & 5: Polished 3D Metallic Gold Artwork (preloaded seamlessly in same 1024x558 frame) */}
+        {canUseMetallicArtwork && (
+          <img
+            src="/aurora-logo.png"
+            alt="AURORA MMXXVI"
+            className={`aurora-metallic-artwork ${showFinalPng ? 'aurora-artwork-visible' : ''}`}
+            onLoad={() => setArtworkLoaded(true)}
+            draggable={false}
           />
-        </g>
-      </svg>
+        )}
+      </div>
     </div>
   );
 }

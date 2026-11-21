@@ -1,64 +1,131 @@
 import { useEffect, useRef } from 'react';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 
-interface SparkParticle {
+interface DustParticle {
+  active: boolean;
   x: number;
   y: number;
   vx: number;
   vy: number;
-  size: number;
+  radius: number;
+  depth: number;
   life: number;
   maxLife: number;
-  hue: number;
-  wobbleAmp: number;
-  wobbleFreq: number;
+  maxAlpha: number;
+  driftAmp: number;
+  driftFreq: number;
   phase: number;
-  streak: boolean;
+  colorIndex: number;
+  isBurst: boolean;
 }
 
 interface AmbientSparksOverlayProps {
   active: boolean;
   burstKey: number;
+  lowPowerMode?: boolean;
 }
 
-export function AmbientSparksOverlay({ active, burstKey }: AmbientSparksOverlayProps) {
+// Greek Royal Gold palette (RGB tuples for zero-allocation string formatting)
+const GOLD_PALETTE: ReadonlyArray<[number, number, number]> = [
+  [255, 242, 198], // Highlight #FFF2C6
+  [244, 213, 138], // Champagne #F4D58A
+  [214, 166, 75],  // Metallic  #D6A64B
+  [233, 182, 90],  // Warm Gold #E9B65A
+];
+
+const POOL_SIZE = 120;
+
+function createEmptyParticle(): DustParticle {
+  return {
+    active: false,
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    radius: 1,
+    depth: 0.5,
+    life: 0,
+    maxLife: 1,
+    maxAlpha: 0.4,
+    driftAmp: 6,
+    driftFreq: 0.5,
+    phase: 0,
+    colorIndex: 1,
+    isBurst: false,
+  };
+}
+
+export function AmbientSparksOverlay({
+  active,
+  burstKey,
+  lowPowerMode = false,
+}: AmbientSparksOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const particlesRef = useRef<SparkParticle[]>([]);
+  const poolRef = useRef<DustParticle[]>([]);
   const activeRef = useRef(active);
+  const reducedMotion = useReducedMotion();
+  const reducedMotionRef = useRef(reducedMotion);
+  const lowPowerRef = useRef(lowPowerMode);
+
+  // Initialize fixed particle pool once
+  if (poolRef.current.length === 0) {
+    for (let i = 0; i < POOL_SIZE; i++) {
+      poolRef.current.push(createEmptyParticle());
+    }
+  }
 
   useEffect(() => {
     activeRef.current = active;
     if (!active) {
-      particlesRef.current = [];
+      const pool = poolRef.current;
+      for (let i = 0; i < pool.length; i++) {
+        pool[i].active = false;
+      }
     }
   }, [active]);
 
-  // Celebratory ignition burst from the lamp bowl position
   useEffect(() => {
-    if (burstKey === 0) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const w = canvas.clientWidth || window.innerWidth;
-    const h = canvas.clientHeight || window.innerHeight;
+    reducedMotionRef.current = reducedMotion;
+  }, [reducedMotion]);
+
+  useEffect(() => {
+    lowPowerRef.current = lowPowerMode;
+  }, [lowPowerMode]);
+
+  // Refined celebratory golden dust burst on lamp touch
+  useEffect(() => {
+    if (burstKey === 0 || reducedMotionRef.current) return;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
     const originX = w * 0.5;
     const originY = h * 0.72;
+    const burstCount = lowPowerRef.current ? 22 : 34;
 
-    for (let i = 0; i < 65; i++) {
-      const angle = -Math.PI * 0.5 + (Math.random() - 0.5) * 1.45;
-      const speed = 110 + Math.random() * 290;
-      particlesRef.current.push({
-        x: originX + (Math.random() - 0.5) * 60,
-        y: originY + (Math.random() - 0.5) * 20,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        size: 1.4 + Math.random() * 3.1,
-        life: 0,
-        maxLife: 1.1 + Math.random() * 1.8,
-        hue: 26 + Math.random() * 24,
-        wobbleAmp: 14 + Math.random() * 28,
-        wobbleFreq: 2.0 + Math.random() * 3.5,
-        phase: Math.random() * Math.PI * 2,
-        streak: Math.random() > 0.35,
-      });
+    const pool = poolRef.current;
+    let spawned = 0;
+    for (let i = 0; i < pool.length && spawned < burstCount; i++) {
+      const p = pool[i];
+      if (p.active) continue;
+      const angle = -Math.PI * 0.5 + (Math.random() - 0.5) * 1.3;
+      const speed = 55 + Math.random() * 145;
+      const depth = 0.5 + Math.random() * 0.5;
+
+      p.active = true;
+      p.isBurst = true;
+      p.x = originX + (Math.random() - 0.5) * 52;
+      p.y = originY + (Math.random() - 0.5) * 18;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed;
+      p.depth = depth;
+      p.radius = (1.1 + Math.random() * 1.9) * depth;
+      p.life = 0;
+      p.maxLife = 1.6 + Math.random() * 1.8;
+      p.maxAlpha = 0.45 + Math.random() * 0.35;
+      p.driftAmp = 8 + Math.random() * 14;
+      p.driftFreq = 0.7 + Math.random() * 1.0;
+      p.phase = Math.random() * Math.PI * 2;
+      p.colorIndex = Math.floor(Math.random() * GOLD_PALETTE.length);
+      spawned++;
     }
   }, [burstKey]);
 
@@ -71,116 +138,170 @@ export function AmbientSparksOverlay({ active, burstKey }: AmbientSparksOverlayP
     let rafId = 0;
     let lastTime = performance.now();
     let spawnAccumulator = 0;
+    let width = window.innerWidth;
+    let height = window.innerHeight;
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
+      const dpr = Math.min(window.devicePixelRatio || 1, lowPowerRef.current ? 1.25 : 1.5);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
     resize();
     window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', resize);
 
-    const spawnRandomSpark = (w: number, h: number) => {
-      // Spawn across bottom and randomly throughout screen so sparks go everywhere organically
-      const fromBottom = Math.random() < 0.65;
-      const x = Math.random() * w;
-      const y = fromBottom ? h * (0.78 + Math.random() * 0.28) : Math.random() * h;
+    const spawnAmbientDust = () => {
+      const pool = poolRef.current;
+      const maxAmbient = lowPowerRef.current ? 40 : 66;
+      let activeCount = 0;
+      let freeSlot: DustParticle | null = null;
 
-      particlesRef.current.push({
-        x,
-        y,
-        vx: (Math.random() - 0.5) * 42,
-        vy: -(28 + Math.random() * 88),
-        size: 1.0 + Math.random() * 2.5,
-        life: 0,
-        maxLife: 2.2 + Math.random() * 3.4,
-        hue: 24 + Math.random() * 28, // fiery orange-amber to golden yellow
-        wobbleAmp: 12 + Math.random() * 34,
-        wobbleFreq: 1.2 + Math.random() * 2.8,
-        phase: Math.random() * Math.PI * 2,
-        streak: Math.random() > 0.5,
-      });
+      for (let i = 0; i < pool.length; i++) {
+        if (pool[i].active) {
+          activeCount++;
+        } else if (!freeSlot) {
+          freeSlot = pool[i];
+        }
+      }
+
+      if (!freeSlot || activeCount >= maxAmbient) return;
+
+      // Concentrate ~80% of dust around outer left/right edges and lower atmospheric regions
+      const zoneRoll = Math.random();
+      let x: number;
+      let y: number;
+      if (zoneRoll < 0.36) {
+        // Left flank
+        x = width * (Math.random() * 0.24);
+        y = height * (0.25 + Math.random() * 0.78);
+      } else if (zoneRoll < 0.72) {
+        // Right flank
+        x = width * (0.76 + Math.random() * 0.24);
+        y = height * (0.25 + Math.random() * 0.78);
+      } else {
+        // Lower atmospheric band
+        x = width * (0.1 + Math.random() * 0.8);
+        y = height * (0.82 + Math.random() * 0.2);
+      }
+
+      const depth = 0.35 + Math.random() * 0.65;
+      freeSlot.active = true;
+      freeSlot.isBurst = false;
+      freeSlot.x = x;
+      freeSlot.y = y;
+      freeSlot.vx = (Math.random() - 0.5) * 6 * depth;
+      freeSlot.vy = -(7 + Math.random() * 15) * depth; // slow, majestic upward float
+      freeSlot.depth = depth;
+      freeSlot.radius = (0.85 + Math.random() * 1.95) * depth;
+      freeSlot.life = 0;
+      freeSlot.maxLife = 5.5 + Math.random() * 6.5;
+      freeSlot.maxAlpha = (0.18 + Math.random() * 0.36) * (0.65 + depth * 0.35);
+      freeSlot.driftAmp = (4 + Math.random() * 10) * depth;
+      freeSlot.driftFreq = 0.35 + Math.random() * 0.55;
+      freeSlot.phase = Math.random() * Math.PI * 2;
+      freeSlot.colorIndex = Math.floor(Math.random() * GOLD_PALETTE.length);
+    };
+
+    const drawStaticReducedDust = () => {
+      ctx.clearRect(0, 0, width, height);
+      if (!activeRef.current) return;
+      // Sparse, serene static gold dust around edges for reduced-motion preference
+      const count = 18;
+      for (let i = 0; i < count; i++) {
+        const side = i % 2 === 0 ? 0.06 + (i * 0.011) % 0.16 : 0.78 + (i * 0.013) % 0.16;
+        const px = width * side;
+        const py = height * (0.12 + ((i * 0.17) % 0.8));
+        const r = 1.2 + (i % 3) * 0.65;
+        const [cr, cg, cb] = GOLD_PALETTE[i % GOLD_PALETTE.length];
+        const grad = ctx.createRadialGradient(px, py, 0, px, py, r * 3.2);
+        grad.addColorStop(0, `rgba(${cr}, ${cg}, ${cb}, 0.38)`);
+        grad.addColorStop(1, `rgba(${cr}, ${cg}, ${cb}, 0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(px, py, r * 3.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
     };
 
     const tick = (now: number) => {
       const dt = Math.min((now - lastTime) / 1000, 0.05);
       lastTime = now;
 
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      ctx.clearRect(0, 0, w, h);
+      if (reducedMotionRef.current) {
+        drawStaticReducedDust();
+        rafId = window.requestAnimationFrame(tick);
+        return;
+      }
+
+      ctx.clearRect(0, 0, width, height);
 
       if (activeRef.current) {
-        spawnAccumulator += dt * 26; // ~26 random ambient sparks/sec
+        const spawnRate = lowPowerRef.current ? 5.5 : 8.5;
+        spawnAccumulator += dt * spawnRate;
         while (spawnAccumulator >= 1) {
           spawnAccumulator -= 1;
-          if (particlesRef.current.length < 180) {
-            spawnRandomSpark(w, h);
-          }
+          spawnAmbientDust();
         }
       }
 
-      const list = particlesRef.current;
-      if (list.length > 0) {
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
+      const pool = poolRef.current;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
 
-        for (let i = list.length - 1; i >= 0; i--) {
-          const p = list[i];
-          p.life += dt;
-          if (p.life >= p.maxLife) {
-            list.splice(i, 1);
-            continue;
-          }
+      for (let i = 0; i < pool.length; i++) {
+        const p = pool[i];
+        if (!p.active) continue;
 
-          const progress = p.life / p.maxLife;
-          const fadeIn = Math.min(1, progress * 5.0);
-          const fadeOut = Math.pow(1 - progress, 1.35);
-          const flicker = 0.72 + 0.28 * Math.sin(p.life * 16 + p.phase);
-          const alpha = fadeIn * fadeOut * flicker;
-
-          const wobbleX = Math.sin(p.life * p.wobbleFreq + p.phase) * p.wobbleAmp;
-          const prevX = p.x;
-          const prevY = p.y;
-
-          p.x += (p.vx + wobbleX) * dt;
-          p.y += p.vy * dt;
-          // Gentle buoyancy deceleration on initial burst
-          p.vx *= 0.985;
-          p.vy = p.vy * 0.992 - 8 * dt;
-
-          // Outer warm glow
-          const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 4.2);
-          grad.addColorStop(0, `hsla(${p.hue + 14}, 100%, 88%, ${alpha})`);
-          grad.addColorStop(0.35, `hsla(${p.hue}, 100%, 60%, ${alpha * 0.85})`);
-          grad.addColorStop(1, `hsla(${p.hue - 10}, 100%, 45%, 0)`);
-
-          ctx.fillStyle = grad;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size * 4.2, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Optional fiery motion streak
-          if (p.streak) {
-            ctx.strokeStyle = `hsla(${p.hue + 10}, 100%, 78%, ${alpha * 0.75})`;
-            ctx.lineWidth = Math.max(0.8, p.size * 0.7);
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(prevX, prevY);
-            ctx.lineTo(p.x, p.y);
-            ctx.stroke();
-          }
+        p.life += dt;
+        if (p.life >= p.maxLife || p.y < -20) {
+          p.active = false;
+          continue;
         }
 
-        ctx.restore();
+        const progress = p.life / p.maxLife;
+        const fadeIn = Math.min(1, progress * 3.2);
+        const fadeOut = Math.pow(1 - progress, 1.45);
+        // Gentle slow breathing shimmer (no rapid flicker)
+        const shimmer = 0.82 + 0.18 * Math.sin(p.life * 2.1 + p.phase);
+
+        // Softly attenuate particles if they drift over the central text corridor
+        const nx = p.x / Math.max(width, 1);
+        const ny = p.y / Math.max(height, 1);
+        const inTextCorridor = nx > 0.22 && nx < 0.78 && ny > 0.2 && ny < 0.86;
+        const corridorFactor = !p.isBurst && inTextCorridor ? 0.35 : 1.0;
+
+        const alpha = p.maxAlpha * fadeIn * fadeOut * shimmer * corridorFactor;
+
+        const swayX = Math.sin(p.life * p.driftFreq + p.phase) * p.driftAmp;
+        p.x += (p.vx + swayX) * dt;
+        p.y += p.vy * dt;
+
+        if (p.isBurst) {
+          p.vx *= 0.965;
+          p.vy = p.vy * 0.972 - 4 * dt;
+        }
+
+        const [cr, cg, cb] = GOLD_PALETTE[p.colorIndex];
+        const glowRadius = p.radius * 3.4;
+
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowRadius);
+        grad.addColorStop(0, `rgba(255, 248, 224, ${alpha})`);
+        grad.addColorStop(0.38, `rgba(${cr}, ${cg}, ${cb}, ${alpha * 0.72})`);
+        grad.addColorStop(1, `rgba(${cr}, ${cg}, ${cb}, 0)`);
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
       }
 
+      ctx.restore();
       rafId = window.requestAnimationFrame(tick);
     };
 
@@ -188,6 +309,7 @@ export function AmbientSparksOverlay({ active, burstKey }: AmbientSparksOverlayP
     return () => {
       window.cancelAnimationFrame(rafId);
       window.removeEventListener('resize', resize);
+      window.removeEventListener('orientationchange', resize);
     };
   }, []);
 

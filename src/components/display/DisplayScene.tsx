@@ -6,6 +6,7 @@ import { createEventId, createSyncMessage } from '../../communication/protocol';
 import { attachDisplaySync } from '../../communication/synchronization';
 import { audioEngine } from '../../engine/AudioEngine';
 import { ProgressiveIgnitionController } from '../../engine/IgnitionController';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useDisplayStore } from '../../state/displayStore';
 import { useInvitationStore } from '../../state/invitationStore';
 import type { InvitationPhase } from '../../types/invitation';
@@ -13,13 +14,23 @@ import { AmbientSparksOverlay } from './AmbientSparksOverlay';
 import { AuroraLogoWriter } from './AuroraLogoWriter';
 import { CompositionLayers } from './CompositionLayers';
 import { FireTypewriter } from './FireTypewriter';
+import { FullscreenToggle } from './FullscreenToggle';
 import '../../styles/display.css';
+
+function detectLowPowerDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  const cores = navigator.hardwareConcurrency ?? 8;
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  return isTouch || cores <= 4;
+}
 
 export function DisplayScene() {
   const channelRef = useRef<ReturnType<typeof attachDisplaySync> | null>(null);
   const setEngineState = useDisplayStore((s) => s.setEngineState);
   const config = useInvitationStore((s) => s.config);
   const soundConfigRef = useRef(config.sound);
+  const reducedMotion = useReducedMotion();
+  const [lowPowerMode] = useState<boolean>(() => detectLowPowerDevice());
 
   const [phase, setPhase] = useState<InvitationPhase>('EXTINGUISHED');
   const [burstKey, setBurstKey] = useState(0);
@@ -82,7 +93,7 @@ export function DisplayScene() {
   }, [setEngineState]);
 
   useEffect(() => {
-    // Ensure flame is always extinguished on page load / refresh
+    // Ensure flame is always extinguished on page load / refresh (no auto-reset timer)
     controller.reset(1);
     const sync = attachDisplaySync(controller, {
       onExtinguishOrReset: resetInvitationSequence,
@@ -98,26 +109,34 @@ export function DisplayScene() {
 
   const createSparkId = useCallback(() => createEventId('spk'), []);
 
+  // Unlock Web Audio on any user pointer interaction across the stage
+  const handleStagePointerDown = useCallback(() => {
+    audioEngine.unlock();
+  }, []);
+
   const handleTouchLamp = useCallback(() => {
     if (phase !== 'EXTINGUISHED') return;
     clearPhaseTimers();
 
-    // Unlock & trigger audio immediately inside user pointer gesture
     audioEngine.unlock();
     audioEngine.playIgnitionWhoosh(soundConfigRef.current);
     audioEngine.startFireCrackle(soundConfigRef.current);
 
-    // Fire up the 3D ceremonial flame and emit celebratory sparks
     controller.triggerFullFlame(1.35);
+
+    if (reducedMotion) {
+      setPhase('COMPLETE');
+      return;
+    }
+
     setBurstKey((k) => k + 1);
     setPhase('IGNITING');
 
-    // Begin writing AURORA MMXXVI once the flame roars up
     const t1 = window.setTimeout(() => {
       setPhase('WRITING_LOGO');
-    }, 1450);
+    }, 1350);
     phaseTimersRef.current.push(t1);
-  }, [phase, clearPhaseTimers, controller]);
+  }, [phase, clearPhaseTimers, controller, reducedMotion]);
 
   const handleWriteTick = useCallback(() => {
     audioEngine.playWritingSpark(soundConfigRef.current);
@@ -127,10 +146,9 @@ export function DisplayScene() {
     audioEngine.playLogoCompleteChime(soundConfigRef.current);
     setPhase('TRANSITIONING');
 
-    // Start typing invitation letter-by-letter as logo settles at top & lamp hides below
     const t2 = window.setTimeout(() => {
       setPhase('TYPING_INVITATION');
-    }, 1150);
+    }, 950);
     phaseTimersRef.current.push(t2);
   }, []);
 
@@ -138,57 +156,84 @@ export function DisplayScene() {
     setPhase('COMPLETE');
   }, []);
 
+  const isInvitationDocked =
+    phase === 'TRANSITIONING' ||
+    phase === 'TYPING_INVITATION' ||
+    phase === 'COMPLETE';
+
   return (
-    <div className={`display-root phase-${phase.toLowerCase()}`}>
-      <Canvas
-        dpr={[1, 2]}
-        camera={{ position: [0, 0, 6], fov: 45, near: 0.1, far: 50 }}
-        gl={{
-          antialias: true,
-          powerPreference: 'high-performance',
-          toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.0,
-        }}
-      >
-        <color attach="background" args={['#000000']} />
-        <Suspense fallback={null}>
-          <CompositionLayers
-            controller={controller}
-            createSparkId={createSparkId}
-            phase={phase}
-            onTouchLamp={handleTouchLamp}
-          />
-        </Suspense>
-        <EffectComposer multisampling={0}>
-          <Bloom
-            intensity={0.52}
-            luminanceThreshold={0.86}
-            luminanceSmoothing={0.22}
-            mipmapBlur
-          />
-        </EffectComposer>
-      </Canvas>
+    <div
+      className={`display-root phase-${phase.toLowerCase()}`}
+      onPointerDown={handleStagePointerDown}
+    >
+      {/* Subtle warm royal atmospheric backdrop */}
+      <div className="royal-atmosphere-bg" aria-hidden="true" />
 
-      {/* Continuous random drifting golden sparks across the entire screen */}
-      <AmbientSparksOverlay active={phase !== 'EXTINGUISHED'} burstKey={burstKey} />
-
-      {/* Interactive overlays: Pure vector fire-writing Logo + Boxless letter-by-letter Invitation */}
-      <div className="invitation-overlay-root">
-        <AuroraLogoWriter
-          logoMain={config.text.logoMain}
-          logoSub={config.text.logoSub}
-          phase={phase}
-          onWriteTick={handleWriteTick}
-          onLogoWriteComplete={handleLogoWriteComplete}
-        />
-
-        <FireTypewriter
-          text={config.text}
-          phase={phase}
-          onTypeTick={handleWriteTick}
-          onComplete={handleInvitationComplete}
-        />
+      {/* Fixed WebGL 3D Ceremonial Lamp & Flame Layer */}
+      <div className="webgl-canvas-layer">
+        <Canvas
+          dpr={lowPowerMode ? [1, 1.5] : [1, 2]}
+          camera={{ position: [0, 0, 6], fov: 45, near: 0.1, far: 50 }}
+          gl={{
+            antialias: !lowPowerMode,
+            powerPreference: 'high-performance',
+            alpha: true,
+            toneMapping: THREE.ACESFilmicToneMapping,
+            toneMappingExposure: 1.0,
+          }}
+        >
+          <Suspense fallback={null}>
+            <CompositionLayers
+              controller={controller}
+              createSparkId={createSparkId}
+              phase={phase}
+              onTouchLamp={handleTouchLamp}
+            />
+          </Suspense>
+          <EffectComposer multisampling={0}>
+            <Bloom
+              intensity={lowPowerMode ? 0.3 : 0.38}
+              luminanceThreshold={0.9}
+              luminanceSmoothing={0.25}
+              mipmapBlur
+            />
+          </EffectComposer>
+        </Canvas>
       </div>
+
+      {/* Subtle Floating Golden Dust Overlay */}
+      <AmbientSparksOverlay
+        active={phase !== 'EXTINGUISHED'}
+        burstKey={burstKey}
+        lowPowerMode={lowPowerMode}
+      />
+
+      {/* Discreet Fullscreen Presentation Control (independent of content flow) */}
+      <FullscreenToggle />
+
+      {/* Responsive Full-Height Invitation Composition Stage */}
+      <main
+        className={`invitation-stage-container ${
+          isInvitationDocked ? 'stage-docked' : 'stage-lamp-focus'
+        }`}
+      >
+        <div className="invitation-content-column">
+          <AuroraLogoWriter
+            logoMain={config.text.logoMain}
+            logoSub={config.text.logoSub}
+            phase={phase}
+            onWriteTick={handleWriteTick}
+            onLogoWriteComplete={handleLogoWriteComplete}
+          />
+
+          <FireTypewriter
+            text={config.text}
+            phase={phase}
+            onTypeTick={handleWriteTick}
+            onComplete={handleInvitationComplete}
+          />
+        </div>
+      </main>
     </div>
   );
 }

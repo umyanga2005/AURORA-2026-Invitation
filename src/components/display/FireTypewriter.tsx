@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import type { InvitationPhase, InvitationTextConfig } from '../../types/invitation';
 
 interface FireTypewriterProps {
@@ -11,7 +12,6 @@ interface FireTypewriterProps {
 interface TypedLineItem {
   id: string;
   kind: 'eyebrow' | 'subtitle' | 'title' | 'detail' | 'footer';
-  label?: string;
   content: string;
 }
 
@@ -21,6 +21,8 @@ export function FireTypewriter({
   onTypeTick,
   onComplete,
 }: FireTypewriterProps) {
+  const reducedMotion = useReducedMotion();
+
   const lines = useMemo<TypedLineItem[]>(() => {
     const items: TypedLineItem[] = [];
     if (text.headerLine1.trim()) {
@@ -36,24 +38,21 @@ export function FireTypewriter({
       items.push({
         id: 'date',
         kind: 'detail',
-        label: text.dateLabel.trim() || 'Date',
-        content: `${text.dateLabel.trim() || 'Date'}  —  ${text.dateValue.trim()}`,
+        content: `${text.dateLabel.trim() || 'Date'} — ${text.dateValue.trim()}`,
       });
     }
     if (text.timeValue.trim()) {
       items.push({
         id: 'time',
         kind: 'detail',
-        label: text.timeLabel.trim() || 'Time',
-        content: `${text.timeLabel.trim() || 'Time'}  —  ${text.timeValue.trim()}`,
+        content: `${text.timeLabel.trim() || 'Time'} — ${text.timeValue.trim()}`,
       });
     }
     if (text.venueValue.trim()) {
       items.push({
         id: 'venue',
         kind: 'detail',
-        label: text.venueLabel.trim() || 'Venue',
-        content: `${text.venueLabel.trim() || 'Venue'}  —  ${text.venueValue.trim()}`,
+        content: `${text.venueLabel.trim() || 'Venue'} — ${text.venueValue.trim()}`,
       });
     }
     if (text.footerLine.trim()) {
@@ -77,8 +76,11 @@ export function FireTypewriter({
       return;
     }
 
-    if (phase === 'COMPLETE') {
+    if (reducedMotion || phase === 'COMPLETE') {
       setTypedChars(totalChars);
+      if (reducedMotion && phase === 'TYPING_INVITATION') {
+        onComplete?.();
+      }
       return;
     }
 
@@ -91,7 +93,6 @@ export function FireTypewriter({
     let current = 0;
     const speed = Math.max(15, Math.min(140, text.typingSpeedMs || 42));
 
-    // Precompute flat character string to check spaces / line breaks for natural rhythm
     const flatBreaks = new Set<number>();
     let offset = 0;
     for (const line of lines) {
@@ -105,7 +106,6 @@ export function FireTypewriter({
       current += 1;
       setTypedChars(current);
 
-      // Determine current character
       let idx = current - 1;
       let ch = '';
       for (const line of lines) {
@@ -125,55 +125,109 @@ export function FireTypewriter({
         return;
       }
 
-      const pause = flatBreaks.has(current) ? speed * 6.5 : ch === ' ' ? speed * 0.65 : speed;
+      const pause = flatBreaks.has(current) ? speed * 6.0 : ch === ' ' ? speed * 0.6 : speed;
       timerId = window.setTimeout(step, pause);
     };
 
-    timerId = window.setTimeout(step, 240);
+    timerId = window.setTimeout(step, 200);
 
     return () => {
       cancelled = true;
       window.clearTimeout(timerId);
     };
-  }, [isVisible, phase, lines, totalChars, text.typingSpeedMs, onTypeTick, onComplete]);
+  }, [isVisible, phase, reducedMotion, lines, totalChars, text.typingSpeedMs, onTypeTick, onComplete]);
 
   if (!isVisible) return null;
 
-  // Split typedChars across lines
   let remaining = typedChars;
-  const isTypingActive = phase === 'TYPING_INVITATION' && typedChars < totalChars;
+  const isTypingActive = !reducedMotion && phase === 'TYPING_INVITATION' && typedChars < totalChars;
+
+  // Render word-grouped characters so lines never wrap mid-word on mobile screens
+  const renderLine = (line: TypedLineItem, visibleCount: number, isCurrentActiveLine: boolean) => {
+    const visibleText = line.content.slice(0, visibleCount);
+    const tokens = visibleText.split(/(\s+)/);
+    let charOffset = 0;
+
+    return (
+      <div key={line.id} className={`inv-line inv-line-${line.kind}`}>
+        {tokens.map((token, tIdx) => {
+          const tokenStart = charOffset;
+          charOffset += token.length;
+          if (!token) return null;
+
+          if (/^\s+$/.test(token)) {
+            return (
+              <span key={`${line.id}-sp-${tIdx}`} className="gold-space">
+                {' '}
+              </span>
+            );
+          }
+
+          return (
+            <span key={`${line.id}-w-${tIdx}`} className="gold-word">
+              {Array.from(token).map((char, cIdx) => (
+                <span key={`${line.id}-${tokenStart + cIdx}`} className="gold-char">
+                  {char}
+                </span>
+              ))}
+            </span>
+          );
+        })}
+        {isCurrentActiveLine && (
+          <span className="gold-cursor" aria-hidden="true">
+            ✦
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  // Pre-compute visible counts cleanly in order
+  const renderedBlocks: Array<{ line: TypedLineItem; lineIdx: number; visibleCount: number; active: boolean }> = [];
+  lines.forEach((line, lineIdx) => {
+    const lineLen = line.content.length;
+    const visibleCount = Math.max(0, Math.min(lineLen, remaining));
+    remaining -= lineLen;
+    if (visibleCount > 0) {
+      const isCurrentActiveLine =
+        isTypingActive &&
+        (visibleCount < lineLen || remaining <= 0) &&
+        (lineIdx === lines.length - 1 || remaining <= 0);
+      renderedBlocks.push({ line, lineIdx, visibleCount, active: isCurrentActiveLine });
+    }
+  });
+
+  const introBlocks = renderedBlocks.filter((b) => b.line.kind === 'eyebrow' || b.line.kind === 'subtitle' || b.line.kind === 'title');
+  const detailBlocks = renderedBlocks.filter((b) => b.line.kind === 'detail');
+  const footerBlocks = renderedBlocks.filter((b) => b.line.kind === 'footer');
 
   return (
-    <div className="invitation-text-layer" aria-live="polite">
-      {lines.map((line, lineIdx) => {
-        const lineLen = line.content.length;
-        const visibleCount = Math.max(0, Math.min(lineLen, remaining));
-        remaining -= lineLen;
+    <section className="invitation-text-layer" aria-live="polite" aria-label="Event Invitation Details">
+      {/* Decorative Greek Gold Separator */}
+      <div className="gold-ornamental-divider" aria-hidden="true">
+        <span className="divider-line" />
+        <span className="divider-diamond" />
+        <span className="divider-line" />
+      </div>
 
-        if (visibleCount === 0) return null;
+      {/* Organization, Introduction & Main Event Title */}
+      <div className="inv-header-group">
+        {introBlocks.map((b) => renderLine(b.line, b.visibleCount, b.active))}
+      </div>
 
-        const isCurrentActiveLine =
-          isTypingActive &&
-          visibleCount > 0 &&
-          (visibleCount < lineLen || remaining <= 0) &&
-          (lineIdx === lines.length - 1 || remaining <= 0);
+      {/* Date, Time & Venue */}
+      {detailBlocks.length > 0 && (
+        <div className="inv-details-group">
+          {detailBlocks.map((b) => renderLine(b.line, b.visibleCount, b.active))}
+        </div>
+      )}
 
-        const visibleChars = Array.from(line.content.slice(0, visibleCount));
-
-        return (
-          <div key={line.id} className={`inv-line inv-line-${line.kind}`}>
-            {visibleChars.map((char, cIdx) => (
-              <span
-                key={`${line.id}-${cIdx}`}
-                className="fire-char"
-              >
-                {char === ' ' ? '\u00A0' : char}
-              </span>
-            ))}
-            {isCurrentActiveLine && <span className="fire-cursor" aria-hidden="true">✦</span>}
-          </div>
-        );
-      })}
-    </div>
+      {/* Closing Quotation */}
+      {footerBlocks.length > 0 && (
+        <div className="inv-footer-group">
+          {footerBlocks.map((b) => renderLine(b.line, b.visibleCount, b.active))}
+        </div>
+      )}
+    </section>
   );
 }
