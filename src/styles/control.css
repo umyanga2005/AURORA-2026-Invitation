@@ -510,3 +510,266 @@ input[type='range'] {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+
+/* =========================================================
+   CONTROLLER PASSWORD LOGIN DOOR
+   ========================================================= */
+.auth-gate-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(circle at 50% 25%, #20180a 0%, #090a0d 62%, #050507 100%);
+  color: #f4efe6;
+}
+
+.auth-gate-card {
+  width: 100%;
+  max-width: 390px;
+  padding: 36px 30px;
+  border-radius: 16px;
+  background: rgba(18, 19, 24, 0.96);
+  border: 1px solid rgba(218, 165, 62, 0.32);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.72), 0 0 36px rgba(218, 165, 62, 0.09);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.auth-gate-emblem {
+  font-family: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
+  font-size: 1.15rem;
+  letter-spacing: 0.16em;
+  color: #f5c862;
+  margin-bottom: 10px;
+}
+
+.auth-gate-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #f4efe6;
+}
+
+.auth-gate-sub {
+  margin: 6px 0 22px;
+  font-size: 0.86rem;
+  color: #9f9a8e;
+}
+
+.auth-gate-input {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(218, 165, 62, 0.34);
+  background: #101116;
+  color: #fff6dc;
+  font-size: 1.08rem;
+  letter-spacing: 0.28em;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.auth-gate-input:focus {
+  border-color: #f3c86a;
+  box-shadow: 0 0 0 3px rgba(243, 200, 106, 0.18);
+}
+
+.auth-gate-error {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: #ff7a6b;
+}
+
+.auth-gate-btn {
+  margin-top: 18px;
+  width: 100%;
+  padding: 13px 18px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f3c86a 0%, #d48924 100%);
+  color: #140e04;
+  font-weight: 700;
+  font-size: 0.94rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.15s, filter 0.2s;
+}
+
+.auth-gate-btn:hover {
+  filter: brightness(1.08);
+}
+
+.auth-gate-btn:active {
+  transform: scale(0.985);
+}
+
+.auth-shake {
+  animation: authShake 0.38s ease-in-out;
+}
+
+@keyframes authShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+
+/* =========================================================
+   HEADER LOCK BUTTON & PANEL ADDITIONS
+   ========================================================= */
+.lock-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(218, 165, 62, 0.35);
+  background: rgba(218, 165, 62, 0.12);
+  color: #f3c86a;
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+
+.lock-btn:hover {
+  background: rgba(218, 165, 62, 0.24);
+}
+
+.panel-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.mini-reset-btn {
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: #c2b8a3;
+  font-size: 0.74rem;
+  cursor: pointer;
+  transition: border-color 0.18s, color 0.18s;
+}
+
+.mini-reset-btn:hover {
+  border-color: rgba(218, 165, 62, 0.45);
+  color: #f3c86a;
+}
+
+/* Sound Settings */
+.sound-settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #111216;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.86rem;
+  color: #e6dfd2;
+  cursor: pointer;
+}
+
+.toggle-row input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: #e8b44c;
+  cursor: pointer;
+}
+
+.slider-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #111216;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: #c9c2b4;
+}
+
+/* Invitation Text Editor */
+.inv-editor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.inv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.76rem;
+  color: #a8a08f;
+}
+
+.inv-field-wide {
+  grid-column: span 2;
+}
+
+.inv-field input[type='text'] {
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #101115;
+  color: #f7f1e3;
+  font-size: 0.86rem;
+  outline: none;
+  transition: border-color 0.18s;
+}
+
+.inv-field input[type='text']:focus {
+  border-color: #f3c86a;
+}
+
+.inv-editor-actions {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.inv-save-btn {
+  padding: 11px 18px;
+  border: none;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #f3c86a 0%, #cf8421 100%);
+  color: #160f04;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: filter 0.18s;
+}
+
+.inv-save-btn:hover {
+  filter: brightness(1.08);
+}
+
+.inv-saved-note {
+  font-size: 0.82rem;
+  color: #82e3a4;
+  font-weight: 600;
+}

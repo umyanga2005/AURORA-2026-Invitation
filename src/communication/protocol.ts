@@ -1,6 +1,7 @@
 import type { FlameColorPalette } from '../config/flameColors';
 import type { FlamePresetLevel } from '../types/flame';
 import type { SharedEngineState } from '../types/engine';
+import type { InvitationConfig } from '../types/invitation';
 
 export type SyncMessageType =
   | 'DISPLAY_READY'
@@ -16,6 +17,7 @@ export type SyncMessageType =
   | 'SET_FLAME_INTENSITY'
   | 'SET_FLAME_COLOR'
   | 'SET_SPARK_SETTINGS'
+  | 'SET_INVITATION_CONFIG'
   | 'FULL_FLAME'
   | 'PAUSE'
   | 'RESUME'
@@ -69,6 +71,7 @@ export type SyncMessage =
       'SET_SPARK_SETTINGS',
       { requiredSparks?: number; autoIntervalSec?: number; sparkSpeed?: number }
     >
+  | BaseSyncMessage<'SET_INVITATION_CONFIG', { config: InvitationConfig }>
   | BaseSyncMessage<'FULL_FLAME', { durationSec: number }>
   | BaseSyncMessage<'PAUSE', undefined>
   | BaseSyncMessage<'RESUME', undefined>

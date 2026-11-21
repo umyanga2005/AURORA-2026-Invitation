@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import sparkVertexShader from '../../shaders/sparkVertex.glsl?raw';
 import sparkFragmentShader from '../../shaders/sparkFragment.glsl?raw';
+import type { FlameColorPalette } from '../../config/flameColors';
 import type { ProgressiveIgnitionController } from '../../engine/IgnitionController';
 
 interface ImpactEffectsProps {
@@ -17,8 +18,10 @@ export function ImpactEffects({ controller }: ImpactEffectsProps) {
   const emberRefs = useRef<(THREE.Mesh | null)[][]>(
     Array.from({ length: MAX_IMPACTS }, () => [])
   );
+  const lastPaletteRef = useRef<FlameColorPalette | null>(null);
 
   const flashMaterials = useMemo(() => {
+    const pal = controller.flame.getColorPalette();
     return Array.from({ length: MAX_IMPACTS }, () => {
       return new THREE.ShaderMaterial({
         vertexShader: sparkVertexShader,
@@ -27,15 +30,19 @@ export function ImpactEffects({ controller }: ImpactEffectsProps) {
           uOpacity: { value: 0 },
           uTime: { value: 0 },
           uSeed: { value: 0 },
+          uSparkCore: { value: new THREE.Color(...pal.sparkCore) },
+          uSparkMid: { value: new THREE.Color(...pal.sparkMid) },
+          uSparkOuter: { value: new THREE.Color(...pal.sparkOuter) },
         },
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
       });
     });
-  }, []);
+  }, [controller]);
 
   const emberMaterials = useMemo(() => {
+    const pal = controller.flame.getColorPalette();
     return Array.from({ length: MAX_IMPACTS }, () =>
       Array.from({ length: EMBERS_PER_IMPACT }, () => {
         return new THREE.ShaderMaterial({
@@ -45,6 +52,9 @@ export function ImpactEffects({ controller }: ImpactEffectsProps) {
             uOpacity: { value: 0 },
             uTime: { value: 0 },
             uSeed: { value: 0 },
+            uSparkCore: { value: new THREE.Color(...pal.sparkCore) },
+            uSparkMid: { value: new THREE.Color(...pal.sparkMid) },
+            uSparkOuter: { value: new THREE.Color(...pal.sparkOuter) },
           },
           transparent: true,
           depthWrite: false,
@@ -52,7 +62,7 @@ export function ImpactEffects({ controller }: ImpactEffectsProps) {
         });
       })
     );
-  }, []);
+  }, [controller]);
 
   useEffect(() => {
     return () => {
@@ -64,6 +74,25 @@ export function ImpactEffects({ controller }: ImpactEffectsProps) {
   useFrame(() => {
     const impacts = controller.sparks.getActiveImpacts();
     const elapsed = controller.clock.getElapsed();
+    const pal = controller.flame.getColorPalette();
+
+    // Dynamically update impact flash & ember colors when palette changes
+    if (lastPaletteRef.current !== pal) {
+      lastPaletteRef.current = pal;
+      const cCore = pal.sparkCore;
+      const cMid = pal.sparkMid;
+      const cOuter = pal.sparkOuter;
+      for (let i = 0; i < MAX_IMPACTS; i++) {
+        flashMaterials[i].uniforms.uSparkCore.value.setRGB(cCore[0], cCore[1], cCore[2]);
+        flashMaterials[i].uniforms.uSparkMid.value.setRGB(cMid[0], cMid[1], cMid[2]);
+        flashMaterials[i].uniforms.uSparkOuter.value.setRGB(cOuter[0], cOuter[1], cOuter[2]);
+        for (let e = 0; e < EMBERS_PER_IMPACT; e++) {
+          emberMaterials[i][e].uniforms.uSparkCore.value.setRGB(cCore[0], cCore[1], cCore[2]);
+          emberMaterials[i][e].uniforms.uSparkMid.value.setRGB(cMid[0], cMid[1], cMid[2]);
+          emberMaterials[i][e].uniforms.uSparkOuter.value.setRGB(cOuter[0], cOuter[1], cOuter[2]);
+        }
+      }
+    }
 
     for (let i = 0; i < MAX_IMPACTS; i++) {
       const imp = impacts[i];

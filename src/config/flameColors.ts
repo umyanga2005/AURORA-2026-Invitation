@@ -7,6 +7,9 @@ export interface FlameColorPalette {
   inner: [number, number, number];
   core: [number, number, number];
   lampGlow: [number, number, number];
+  sparkCore: [number, number, number];
+  sparkMid: [number, number, number];
+  sparkOuter: [number, number, number];
   accentHex: string;
 }
 
@@ -22,6 +25,9 @@ export const FLAME_COLOR_PRESETS: FlameColorPalette[] = [
     inner: [1.0, 0.84, 0.24],
     core: [1.0, 0.98, 0.86],
     lampGlow: [1.0, 0.58, 0.12],
+    sparkCore: [1.0, 0.99, 0.88],
+    sparkMid: [1.0, 0.82, 0.25],
+    sparkOuter: [1.0, 0.45, 0.06],
     accentHex: '#f59e0b',
   },
   {
@@ -33,6 +39,9 @@ export const FLAME_COLOR_PRESETS: FlameColorPalette[] = [
     inner: [0.42, 0.86, 1.0],
     core: [0.88, 0.96, 1.0],
     lampGlow: [0.2, 0.6, 1.0],
+    sparkCore: [0.92, 0.97, 1.0],
+    sparkMid: [0.35, 0.75, 1.0],
+    sparkOuter: [0.08, 0.35, 0.95],
     accentHex: '#3b82f6',
   },
   {
@@ -44,6 +53,9 @@ export const FLAME_COLOR_PRESETS: FlameColorPalette[] = [
     inner: [0.65, 1.0, 0.7],
     core: [0.9, 1.0, 0.92],
     lampGlow: [0.25, 0.9, 0.45],
+    sparkCore: [0.92, 1.0, 0.94],
+    sparkMid: [0.35, 0.95, 0.55],
+    sparkOuter: [0.05, 0.65, 0.25],
     accentHex: '#10b981',
   },
   {
@@ -55,6 +67,9 @@ export const FLAME_COLOR_PRESETS: FlameColorPalette[] = [
     inner: [0.92, 0.7, 1.0],
     core: [0.98, 0.92, 1.0],
     lampGlow: [0.75, 0.35, 1.0],
+    sparkCore: [0.98, 0.92, 1.0],
+    sparkMid: [0.85, 0.45, 1.0],
+    sparkOuter: [0.55, 0.1, 0.85],
     accentHex: '#a855f7',
   },
   {
@@ -66,6 +81,9 @@ export const FLAME_COLOR_PRESETS: FlameColorPalette[] = [
     inner: [1.0, 0.58, 0.45],
     core: [1.0, 0.9, 0.88],
     lampGlow: [1.0, 0.25, 0.2],
+    sparkCore: [1.0, 0.92, 0.9],
+    sparkMid: [1.0, 0.35, 0.25],
+    sparkOuter: [0.85, 0.05, 0.08],
     accentHex: '#ef4444',
   },
   {
@@ -77,6 +95,9 @@ export const FLAME_COLOR_PRESETS: FlameColorPalette[] = [
     inner: [0.92, 0.96, 1.0],
     core: [1.0, 1.0, 1.0],
     lampGlow: [0.7, 0.82, 0.95],
+    sparkCore: [1.0, 1.0, 1.0],
+    sparkMid: [0.85, 0.92, 1.0],
+    sparkOuter: [0.55, 0.68, 0.82],
     accentHex: '#cbd5e1',
   },
 ];
@@ -90,7 +111,7 @@ export function getFlamePalette(id: string, customPalette?: FlameColorPalette): 
 }
 
 /**
- * Generate a harmonious 5-tier flame ramp from a single base color hex
+ * Generate a harmonious 5-tier flame ramp and matching sparks from a single base color hex
  */
 export function generatePaletteFromHex(hex: string, label = 'Custom Color'): FlameColorPalette {
   const cleanHex = hex.replace('#', '');
@@ -115,6 +136,13 @@ export function generatePaletteFromHex(hex: string, label = 'Custom Color'): Fla
       Math.min(1, b + (1 - b) * 0.92),
     ],
     lampGlow: [r, g, b],
+    sparkCore: [
+      Math.min(1, r + (1 - r) * 0.9),
+      Math.min(1, g + (1 - g) * 0.9),
+      Math.min(1, b + (1 - b) * 0.9),
+    ],
+    sparkMid: [r, g, b],
+    sparkOuter: [Math.max(0, r * 0.7), Math.max(0, g * 0.7), Math.max(0, b * 0.7)],
     accentHex: hex,
   };
 }

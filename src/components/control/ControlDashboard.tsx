@@ -9,21 +9,63 @@ import {
   clampRequiredSparks,
   clampSparkSpeed,
 } from '../../config/validation';
+import { useInvitationStore } from '../../state/invitationStore';
 import { useOperatorStore } from '../../state/operatorStore';
 import type { FlamePresetLevel } from '../../types/flame';
+import type { InvitationConfig, InvitationTextConfig, SoundConfig } from '../../types/invitation';
 import { DisplayControls } from './DisplayControls';
 import { FlameSettings } from './FlameSettings';
+import { InvitationSettings } from './InvitationSettings';
 import { MainActions } from './MainActions';
 import { ProgressIndicator } from './ProgressIndicator';
+import { SoundSettings } from './SoundSettings';
 import { SparkSettings } from './SparkSettings';
 import '../../styles/control.css';
 
-export function ControlDashboard() {
+interface ControlDashboardProps {
+  onLock?: () => void;
+}
+
+export function ControlDashboard({ onLock }: ControlDashboardProps) {
   const engineState = useOperatorStore((s) => s.engineState);
   const displayConnected = useOperatorStore((s) => s.displayConnected);
+  const invitationConfig = useInvitationStore((s) => s.config);
   const clientRef = useRef<ReturnType<typeof createOperatorSyncClient> | null>(null);
   const displayWindowRef = useRef<Window | null>(null);
   const [fullscreenNote, setFullscreenNote] = useState<string | null>(null);
+
+  const broadcastInvitationConfig = useCallback((config: InvitationConfig) => {
+    const cycleId = useOperatorStore.getState().engineState.cycleId;
+    clientRef.current?.channel.send(
+      createSyncMessage('SET_INVITATION_CONFIG', 'operator', cycleId, { config })
+    );
+  }, []);
+
+  const handleSaveInvitationText = useCallback(
+    (nextText: InvitationTextConfig) => {
+      const updated = useInvitationStore.getState().updateText(nextText);
+      broadcastInvitationConfig(updated);
+    },
+    [broadcastInvitationConfig]
+  );
+
+  const handleResetInvitationText = useCallback(() => {
+    const updated = useInvitationStore.getState().resetTextDefaults();
+    broadcastInvitationConfig(updated);
+  }, [broadcastInvitationConfig]);
+
+  const handleChangeSound = useCallback(
+    (partial: Partial<SoundConfig>) => {
+      const updated = useInvitationStore.getState().updateSound(partial);
+      broadcastInvitationConfig(updated);
+    },
+    [broadcastInvitationConfig]
+  );
+
+  const handleResetSound = useCallback(() => {
+    const updated = useInvitationStore.getState().resetSoundDefaults();
+    broadcastInvitationConfig(updated);
+  }, [broadcastInvitationConfig]);
 
   useEffect(() => {
     const client = createOperatorSyncClient();
@@ -246,8 +288,8 @@ export function ControlDashboard() {
     <div className="control-root">
       <header className="control-header">
         <div className="brand">
-          <h1>FLAME GLOBE</h1>
-          <p>Golden Ceremonial Flame Control</p>
+          <h1>AURORA MMXXVI</h1>
+          <p>Interactive Invitation &amp; Ceremonial Flame Controller</p>
         </div>
 
         <div className="header-meta">
@@ -262,17 +304,16 @@ export function ControlDashboard() {
             </span>
           </div>
           <div className="meta-badge">
-            <span className="meta-label">Sparks</span>
-            <span className="meta-value gold-text">
-              {engineState.completedSparks} / {engineState.requiredSparks}
+            <span className="meta-label">Audio</span>
+            <span className={`meta-value ${invitationConfig.sound.enabled ? 'gold-text' : 'muted-text'}`}>
+              {invitationConfig.sound.enabled ? 'ON' : 'MUTED'}
             </span>
           </div>
-          <div className="meta-badge">
-            <span className="meta-label">Progress</span>
-            <span className="meta-value gold-text">
-              {Math.round(engineState.progress * 100)}%
-            </span>
-          </div>
+          {onLock && (
+            <button type="button" className="lock-btn" onClick={onLock}>
+              Lock
+            </button>
+          )}
         </div>
       </header>
 
@@ -281,6 +322,11 @@ export function ControlDashboard() {
 
         <div className="control-columns">
           <div className="column-stack">
+            <InvitationSettings
+              text={invitationConfig.text}
+              onSaveText={handleSaveInvitationText}
+              onResetText={handleResetInvitationText}
+            />
             <MainActions
               state={engineState}
               onReleaseSpark={handleReleaseSpark}
@@ -299,6 +345,11 @@ export function ControlDashboard() {
           </div>
 
           <div className="column-stack">
+            <SoundSettings
+              sound={invitationConfig.sound}
+              onChangeSound={handleChangeSound}
+              onResetSound={handleResetSound}
+            />
             <FlameSettings
               state={engineState}
               onSelectPreset={handleSelectPreset}

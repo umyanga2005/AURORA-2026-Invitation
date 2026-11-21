@@ -2,14 +2,21 @@ import { FlameSyncChannel } from './channel';
 import { createSyncMessage, type SyncMessage } from './protocol';
 import type { ProgressiveIgnitionController } from '../engine/IgnitionController';
 import { useDisplayStore } from '../state/displayStore';
+import { useInvitationStore } from '../state/invitationStore';
 import { useOperatorStore } from '../state/operatorStore';
+
+export interface DisplaySyncOptions {
+  onExtinguishOrReset?: () => void;
+}
 
 /**
  * Connects the Display's ProgressiveIgnitionController to BroadcastChannel.
  */
-export function attachDisplaySync(controller: ProgressiveIgnitionController) {
+export function attachDisplaySync(
+  controller: ProgressiveIgnitionController,
+  options: DisplaySyncOptions = {}
+) {
   const channel = new FlameSyncChannel();
-  const bootedAt = Date.now();
   let lastOperatorPing = 0;
 
   const unsubscribe = channel.subscribe((msg: SyncMessage) => {
@@ -28,27 +35,20 @@ export function attachDisplaySync(controller: ProgressiveIgnitionController) {
         break;
 
       case 'STATE_REQUEST':
-        // If Display just booted (< 400ms) and is still IDLE, let Operator restore state if it has one;
-        // otherwise Display sends its authoritative live state.
-        if (Date.now() - bootedAt > 400 || controller.getSnapshot().status !== 'IDLE') {
-          channel.send(
-            createSyncMessage('STATE_SNAPSHOT', 'display', controller.getCycleId(), {
-              state: controller.getSnapshot(),
-            })
-          );
-        }
+        channel.send(
+          createSyncMessage('STATE_SNAPSHOT', 'display', controller.getCycleId(), {
+            state: controller.getSnapshot(),
+          })
+        );
         break;
 
       case 'STATE_SNAPSHOT':
-        // Operator restoring state onto a freshly reloaded Display
-        if (
-          Date.now() - bootedAt < 2000 &&
-          controller.getSnapshot().status === 'IDLE' &&
-          controller.getSnapshot().completedSparks === 0
-        ) {
-          controller.applySnapshot(msg.payload.state);
-          useDisplayStore.getState().setEngineState(controller.getSnapshot());
-        }
+        // On refresh, Display intentionally remains EXTINGUISHED until touched.
+        // Only apply non-flame settings if needed, never re-ignite automatically.
+        break;
+
+      case 'SET_INVITATION_CONFIG':
+        useInvitationStore.getState().setConfig(msg.payload.config);
         break;
 
       case 'RELEASE_SPARK':
@@ -101,23 +101,25 @@ export function attachDisplaySync(controller: ProgressiveIgnitionController) {
 
       case 'EXTINGUISH':
         controller.extinguish();
+        options.onExtinguishOrReset?.();
         break;
 
       case 'RESET':
         controller.reset(msg.payload.nextCycleId);
+        options.onExtinguishOrReset?.();
         break;
     }
   });
 
-  // Announce display readiness and request any existing state from operator
+  // Announce display readiness and fresh extinguished state
   channel.send(
     createSyncMessage('DISPLAY_READY', 'display', controller.getCycleId(), {
-      version: '1.0.0',
+      version: '2.0.0',
     })
   );
   channel.send(
-    createSyncMessage('STATE_REQUEST', 'display', controller.getCycleId(), {
-      requester: 'display',
+    createSyncMessage('STATE_SNAPSHOT', 'display', controller.getCycleId(), {
+      state: controller.getSnapshot(),
     })
   );
 
@@ -155,25 +157,23 @@ export function createOperatorSyncClient() {
     switch (msg.type) {
       case 'DISPLAY_READY': {
         const current = store.engineState;
-        if (current.status !== 'IDLE' || current.completedSparks > 0 || current.requiredSparks !== 20) {
-          channel.send(
-            createSyncMessage('STATE_SNAPSHOT', 'operator', current.cycleId, {
-              state: current,
-            })
-          );
-        }
+        const invitationConfig = useInvitationStore.getState().config;
+        channel.send(
+          createSyncMessage('SET_INVITATION_CONFIG', 'operator', current.cycleId, {
+            config: invitationConfig,
+          })
+        );
         break;
       }
 
       case 'STATE_REQUEST': {
         const current = store.engineState;
-        if (current.status !== 'IDLE' || current.completedSparks > 0) {
-          channel.send(
-            createSyncMessage('STATE_SNAPSHOT', 'operator', current.cycleId, {
-              state: current,
-            })
-          );
-        }
+        const invitationConfig = useInvitationStore.getState().config;
+        channel.send(
+          createSyncMessage('SET_INVITATION_CONFIG', 'operator', current.cycleId, {
+            config: invitationConfig,
+          })
+        );
         break;
       }
 

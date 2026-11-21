@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import sparkVertexShader from '../../shaders/sparkVertex.glsl?raw';
 import sparkFragmentShader from '../../shaders/sparkFragment.glsl?raw';
+import type { FlameColorPalette } from '../../config/flameColors';
 import type { ProgressiveIgnitionController } from '../../engine/IgnitionController';
 
 interface SparkRendererProps {
@@ -17,8 +18,10 @@ export function SparkRenderer({ controller }: SparkRendererProps) {
   const trailRefs = useRef<(THREE.Mesh | null)[][]>(
     Array.from({ length: MAX_RENDERED_SPARKS }, () => [])
   );
+  const lastPaletteRef = useRef<FlameColorPalette | null>(null);
 
   const headMaterials = useMemo(() => {
+    const pal = controller.flame.getColorPalette();
     return Array.from({ length: MAX_RENDERED_SPARKS }, () => {
       return new THREE.ShaderMaterial({
         vertexShader: sparkVertexShader,
@@ -27,15 +30,19 @@ export function SparkRenderer({ controller }: SparkRendererProps) {
           uOpacity: { value: 0 },
           uTime: { value: 0 },
           uSeed: { value: 0 },
+          uSparkCore: { value: new THREE.Color(...pal.sparkCore) },
+          uSparkMid: { value: new THREE.Color(...pal.sparkMid) },
+          uSparkOuter: { value: new THREE.Color(...pal.sparkOuter) },
         },
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
       });
     });
-  }, []);
+  }, [controller]);
 
   const trailMaterials = useMemo(() => {
+    const pal = controller.flame.getColorPalette();
     return Array.from({ length: MAX_RENDERED_SPARKS }, () =>
       Array.from({ length: TRAIL_SEGMENTS }, () => {
         return new THREE.ShaderMaterial({
@@ -45,6 +52,9 @@ export function SparkRenderer({ controller }: SparkRendererProps) {
             uOpacity: { value: 0 },
             uTime: { value: 0 },
             uSeed: { value: 0 },
+            uSparkCore: { value: new THREE.Color(...pal.sparkCore) },
+            uSparkMid: { value: new THREE.Color(...pal.sparkMid) },
+            uSparkOuter: { value: new THREE.Color(...pal.sparkOuter) },
           },
           transparent: true,
           depthWrite: false,
@@ -52,7 +62,7 @@ export function SparkRenderer({ controller }: SparkRendererProps) {
         });
       })
     );
-  }, []);
+  }, [controller]);
 
   useEffect(() => {
     return () => {
@@ -64,6 +74,25 @@ export function SparkRenderer({ controller }: SparkRendererProps) {
   useFrame(() => {
     const active = controller.sparks.getActiveSparks();
     const elapsed = controller.clock.getElapsed();
+    const pal = controller.flame.getColorPalette();
+
+    // Dynamically update spark color uniforms when palette changes
+    if (lastPaletteRef.current !== pal) {
+      lastPaletteRef.current = pal;
+      const cCore = pal.sparkCore;
+      const cMid = pal.sparkMid;
+      const cOuter = pal.sparkOuter;
+      for (let i = 0; i < MAX_RENDERED_SPARKS; i++) {
+        headMaterials[i].uniforms.uSparkCore.value.setRGB(cCore[0], cCore[1], cCore[2]);
+        headMaterials[i].uniforms.uSparkMid.value.setRGB(cMid[0], cMid[1], cMid[2]);
+        headMaterials[i].uniforms.uSparkOuter.value.setRGB(cOuter[0], cOuter[1], cOuter[2]);
+        for (let s = 0; s < TRAIL_SEGMENTS; s++) {
+          trailMaterials[i][s].uniforms.uSparkCore.value.setRGB(cCore[0], cCore[1], cCore[2]);
+          trailMaterials[i][s].uniforms.uSparkMid.value.setRGB(cMid[0], cMid[1], cMid[2]);
+          trailMaterials[i][s].uniforms.uSparkOuter.value.setRGB(cOuter[0], cOuter[1], cOuter[2]);
+        }
+      }
+    }
 
     for (let i = 0; i < MAX_RENDERED_SPARKS; i++) {
       const headMesh = headRefs.current[i];

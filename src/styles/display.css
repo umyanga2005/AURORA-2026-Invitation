@@ -1,14 +1,299 @@
 .display-root {
+  position: relative;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background: #000000;
   overflow: hidden;
   user-select: none;
-  cursor: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .display-root canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
+}
+
+/* Continuous random sparks overlay */
+.ambient-sparks-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Overlay wrapper for Logo & Invitation text (non-blocking) */
+.invitation-overlay-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* =========================================================
+   AURORA MMXXVI — PURE VECTOR FIRE-WRITING LOGO
+   ========================================================= */
+.aurora-logo-stage {
+  position: fixed;
+  left: 50%;
+  width: min(92vw, 720px);
+  pointer-events: none;
+  will-change: transform, top;
+  transition:
+    top 1.45s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* While writing above the burning lamp */
+.aurora-logo-center {
+  top: 22vh;
+  transform: translate(-50%, -22%) scale(1);
+}
+
+/* Smoothly animated upward with generous top space (never invisible) */
+.aurora-logo-docked-top {
+  top: 4.5vh;
+  transform: translate(-50%, 0%) scale(0.76);
+}
+
+.aurora-logo-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 0 18px rgba(255, 148, 36, 0.42));
+}
+
+.aurora-main-letter {
+  font-family: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
+  font-size: 112px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  stroke-dasharray: 520;
+  stroke-dashoffset: 520;
+  fill-opacity: 0;
+  animation: letterFireDraw 0.92s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.aurora-sub-letter {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 46px;
+  font-weight: 600;
+  letter-spacing: 6px;
+  stroke-dasharray: 280;
+  stroke-dashoffset: 280;
+  fill-opacity: 0;
+  animation: letterFireDraw 0.72s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.logo-letter-write {
+  animation: letterGlowPulse 3.6s ease-in-out infinite alternate;
+}
+
+@keyframes letterFireDraw {
+  0% {
+    stroke-dashoffset: 520;
+    fill-opacity: 0;
+    filter: brightness(2.2) drop-shadow(0 0 16px #ff7b00);
+  }
+  55% {
+    stroke-dashoffset: 0;
+    fill-opacity: 0.35;
+    filter: brightness(1.6) drop-shadow(0 0 14px #ffb347);
+  }
+  100% {
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+    filter: brightness(1.05) drop-shadow(0 0 8px rgba(255, 165, 48, 0.65));
+  }
+}
+
+@keyframes letterGlowPulse {
+  0% {
+    filter: drop-shadow(0 0 8px rgba(255, 145, 30, 0.45));
+  }
+  100% {
+    filter: drop-shadow(0 0 18px rgba(255, 196, 82, 0.78));
+  }
+}
+
+/* Ornamental laurels & lightning bolts draw in via stroke-dashoffset */
+.logo-ornament-group .logo-draw-path {
+  stroke-dasharray: 900;
+  stroke-dashoffset: 900;
+  fill-opacity: 0;
+  opacity: 0;
+}
+
+.logo-ornament-group.ornament-draw .logo-draw-path {
+  opacity: 1;
+  animation: ornamentFireDraw 1.15s cubic-bezier(0.25, 1, 0.35, 1) forwards;
+}
+
+@keyframes ornamentFireDraw {
+  0% {
+    stroke-dashoffset: 900;
+    fill-opacity: 0;
+    filter: brightness(1.9);
+  }
+  65% {
+    stroke-dashoffset: 0;
+    fill-opacity: 0.35;
+    filter: brightness(1.4);
+  }
+  100% {
+    stroke-dashoffset: 0;
+    fill-opacity: 0.96;
+    filter: brightness(1.05);
+  }
+}
+
+/* =========================================================
+   BOXLESS LETTER-BY-LETTER FIRE-MIXED-GOLD INVITATION
+   ========================================================= */
+.invitation-text-layer {
+  position: fixed;
+  top: 33vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(90vw, 760px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.85rem;
+  padding: 0 1rem;
+  /* Explicitly NO box, NO background, NO border */
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.inv-line {
+  line-height: 1.45;
+  letter-spacing: 0.04em;
+  word-wrap: break-word;
+}
+
+.inv-line-eyebrow {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: clamp(0.85rem, 2.1vw, 1.15rem);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.inv-line-subtitle {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: clamp(1.05rem, 2.6vw, 1.45rem);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  margin-top: -0.25rem;
+}
+
+.inv-line-title {
+  font-family: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
+  font-size: clamp(1.35rem, 3.6vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0.35rem 0 0.75rem;
+}
+
+.inv-line-detail {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: clamp(0.95rem, 2.4vw, 1.32rem);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.inv-line-footer {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: clamp(1rem, 2.3vw, 1.32rem);
+  letter-spacing: 0.05em;
+  margin-top: 1.05rem;
+  opacity: 0.92;
+}
+
+/* Individual fire-mixed-gold typed characters */
+.fire-char {
+  display: inline-block;
+  background: linear-gradient(
+    180deg,
+    #fff9d6 0%,
+    #ffd76a 32%,
+    #ff9824 68%,
+    #e07a12 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: charFireIgnite 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes charFireIgnite {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(1.18);
+    filter: brightness(2.5) drop-shadow(0 0 14px #ff6a00) drop-shadow(0 0 6px #fff7b8);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(-1px) scale(1.04);
+    filter: brightness(1.65) drop-shadow(0 0 11px rgba(255, 136, 20, 0.95));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: brightness(1.06) drop-shadow(0 0 8px rgba(255, 152, 36, 0.55));
+  }
+}
+
+.fire-cursor {
+  display: inline-block;
+  margin-left: 4px;
+  color: #fff2b2;
+  text-shadow:
+    0 0 8px #fff5b8,
+    0 0 16px #ff8c1a,
+    0 0 26px #ff4d00;
+  animation: emberCursorBlink 0.45s ease-in-out infinite alternate;
+}
+
+@keyframes emberCursorBlink {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.22);
+  }
+}
+
+/* Mobile portrait spacing adjustments */
+@media (max-width: 640px) {
+  .aurora-logo-center {
+    top: 25vh;
+    width: 94vw;
+  }
+
+  .aurora-logo-docked-top {
+    top: 5vh;
+    width: 92vw;
+    transform: translate(-50%, 0%) scale(0.86);
+  }
+
+  .invitation-text-layer {
+    top: 30vh;
+    gap: 0.7rem;
+  }
 }
