@@ -274,6 +274,166 @@ class InvitationAudioEngine {
       osc.stop(t + 1.5);
     });
   }
+
+  // =========================================================
+  // PHASE 03 — THE GATES OF OLYMPUS CINEMATIC AUDIO
+  // =========================================================
+
+  public playEntranceEmblemChime(config: SoundConfig = this.currentConfig): void {
+    try {
+      this.currentConfig = config;
+      if (!config.enabled || config.masterVolume <= 0.01) return;
+      const ctx = this.ensureContext();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+      const vol = config.masterVolume;
+      // Majestic Greek golden fifth + octave chime
+      const tones = [440.0, 659.25, 880.0, 1318.51];
+
+      tones.forEach((freq, idx) => {
+        const t = now + idx * 0.055;
+        const osc = ctx.createOscillator();
+        osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+        osc.frequency.setValueAtTime(freq, t);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime((idx < 2 ? 0.075 : 0.042) * vol, t + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 1.85);
+
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 1.9);
+      });
+    } catch {
+      // Never block entrance on audio error
+    }
+  }
+
+  public playDistantThunder(config: SoundConfig = this.currentConfig): void {
+    try {
+      this.currentConfig = config;
+      if (!config.enabled || config.masterVolume <= 0.01) return;
+      const ctx = this.ensureContext();
+      if (!ctx || !this.noiseBuffer) return;
+
+      const now = ctx.currentTime;
+      const vol = config.masterVolume;
+
+      // Restrained distant atmospheric rumble (not loud horror thunder)
+      const noise = ctx.createBufferSource();
+      noise.buffer = this.noiseBuffer;
+      noise.loop = true;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(160, now);
+      filter.frequency.exponentialRampToValueAtTime(95, now + 1.2);
+      filter.frequency.exponentialRampToValueAtTime(52, now + 3.0);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.24 * vol, now + 0.35);
+      gain.gain.linearRampToValueAtTime(0.18 * vol, now + 1.3);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.1);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start(now);
+      noise.stop(now + 3.15);
+    } catch {
+      // Never block entrance on audio error
+    }
+  }
+
+  public playHeavyDoorsOpening(config: SoundConfig = this.currentConfig): void {
+    try {
+      this.currentConfig = config;
+      if (!config.enabled || config.masterVolume <= 0.01) return;
+      const ctx = this.ensureContext();
+      if (!ctx || !this.noiseBuffer) return;
+
+      const now = ctx.currentTime;
+      const vol = config.masterVolume;
+
+      // Deep bronze & stone temple door rotation resonance
+      const noise = ctx.createBufferSource();
+      noise.buffer = this.noiseBuffer;
+      noise.loop = true;
+
+      const bandpass = ctx.createBiquadFilter();
+      bandpass.type = 'bandpass';
+      bandpass.Q.setValueAtTime(2.4, now);
+      bandpass.frequency.setValueAtTime(115, now);
+      bandpass.frequency.linearRampToValueAtTime(185, now + 1.4);
+      bandpass.frequency.linearRampToValueAtTime(92, now + 2.8);
+
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(0.2 * vol, now + 0.45);
+      g.gain.linearRampToValueAtTime(0.16 * vol, now + 2.0);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 2.95);
+
+      noise.connect(bandpass);
+      bandpass.connect(g);
+      g.connect(ctx.destination);
+      noise.start(now);
+      noise.stop(now + 3.0);
+
+      // Subtle low monumental harmonic drone
+      const drone = ctx.createOscillator();
+      drone.type = 'sine';
+      drone.frequency.setValueAtTime(73.42, now); // D2
+      drone.frequency.linearRampToValueAtTime(65.41, now + 2.7); // C2
+
+      const droneGain = ctx.createGain();
+      droneGain.gain.setValueAtTime(0.0001, now);
+      droneGain.gain.linearRampToValueAtTime(0.14 * vol, now + 0.5);
+      droneGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.85);
+
+      drone.connect(droneGain);
+      droneGain.connect(ctx.destination);
+      drone.start(now);
+      drone.stop(now + 2.9);
+    } catch {
+      // Never block entrance on audio error
+    }
+  }
+
+  public playDivineLightReveal(config: SoundConfig = this.currentConfig): void {
+    try {
+      this.currentConfig = config;
+      if (!config.enabled || config.masterVolume <= 0.01) return;
+      const ctx = this.ensureContext();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+      const vol = config.masterVolume;
+
+      // Ethereal warm golden pad chord (D4, A4, D5, F#5)
+      const chord = [293.66, 440.0, 587.33, 739.99];
+      chord.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.linearRampToValueAtTime((idx < 2 ? 0.05 : 0.032) * vol, now + 0.65);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 2.6);
+
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 2.65);
+      });
+    } catch {
+      // Never block entrance on audio error
+    }
+  }
 }
 
 export const audioEngine = new InvitationAudioEngine();

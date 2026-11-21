@@ -1,0 +1,316 @@
+/* =========================================================
+   PHASE 03 — THE GATES OF OLYMPUS ENTRANCE STYLING
+   ========================================================= */
+
+.gates-host {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.gates-host.gates-state-doors_opening,
+.gates-host.gates-state-light_reveal {
+  pointer-events: none;
+}
+
+/* Soft radial golden veil during LIGHT_REVEAL */
+.entrance-light-veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse 62% 68% at 50% 48%,
+    rgba(255, 242, 198, 0.42) 0%,
+    rgba(244, 213, 138, 0.22) 38%,
+    rgba(214, 166, 75, 0.06) 68%,
+    rgba(5, 5, 5, 0) 100%
+  );
+  transition: opacity 0.9s ease-in-out;
+}
+
+.entrance-light-veil.veil-active {
+  opacity: 1;
+}
+
+/* =========================================================
+   ACCESSIBLE ENTRANCE OVERLAY & PROMPT
+   ========================================================= */
+.entrance-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  transition: opacity 0.55s ease-out;
+}
+
+.entrance-overlay-exiting {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.entrance-hit-button {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  padding:
+    max(24px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right))
+    max(clamp(28px, 6dvh, 72px), env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  cursor: pointer;
+  color: var(--gold-champagne, #f4d58a);
+  outline: none;
+}
+
+.entrance-hit-button:focus-visible .entrance-prompt-stack {
+  outline: 2px solid var(--gold-champagne, #f4d58a);
+  outline-offset: 10px;
+  border-radius: 10px;
+}
+
+.entrance-prompt-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: clamp(0.45rem, 1.1dvh, 0.78rem);
+  padding: 12px 22px;
+  border-radius: 12px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(5, 5, 5, 0.72) 0%,
+    rgba(5, 5, 5, 0.44) 62%,
+    rgba(5, 5, 5, 0) 100%
+  );
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.9s ease-out,
+    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.entrance-prompt-stack.prompt-awakening {
+  opacity: 0.45;
+  transform: translateY(4px);
+}
+
+.entrance-prompt-stack.prompt-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.entrance-kicker {
+  font-family: var(--font-serif-caps, 'Cinzel', Georgia, serif);
+  font-size: clamp(0.84rem, 1.8vw, 1.24rem);
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  color: var(--gold-champagne, #f4d58a);
+  text-shadow: 0 2px 12px rgba(5, 5, 5, 0.95), 0 0 14px rgba(214, 166, 75, 0.32);
+}
+
+.entrance-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-serif-caps, 'Cinzel', Georgia, serif);
+  font-size: clamp(0.95rem, 2.1vw, 1.32rem);
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  color: var(--gold-highlight, #fff2c6);
+  text-shadow: 0 2px 10px rgba(5, 5, 5, 0.96), 0 0 16px rgba(244, 213, 138, 0.48);
+  animation: entrancePulseGold 2.4s ease-in-out infinite;
+}
+
+.entrance-cta-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--gold-champagne, #f4d58a);
+  transform: rotate(45deg);
+  box-shadow: 0 0 8px rgba(244, 213, 138, 0.72);
+}
+
+.entrance-sub {
+  font-family: var(--font-editorial, 'Cormorant Garamond', Georgia, serif);
+  font-style: italic;
+  font-size: clamp(0.88rem, 1.7vw, 1.18rem);
+  letter-spacing: 0.14em;
+  color: rgba(244, 213, 138, 0.84);
+  text-shadow: 0 2px 10px rgba(5, 5, 5, 0.96);
+}
+
+@keyframes entrancePulseGold {
+  0%,
+  100% {
+    opacity: 0.78;
+    transform: scale(0.985);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+/* =========================================================
+   TABLET PORTRAIT PROMPT PLACEMENT
+   ========================================================= */
+@media (min-width: 600px) and (max-width: 1100px) and (orientation: portrait) {
+  .entrance-hit-button {
+    padding-bottom: max(clamp(42px, 6.5dvh, 88px), env(safe-area-inset-bottom));
+  }
+
+  .entrance-kicker {
+    font-size: clamp(1.05rem, 2.2vw, 1.38rem);
+  }
+
+  .entrance-cta {
+    font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+  }
+
+  .entrance-sub {
+    font-size: clamp(1.05rem, 2.2vw, 1.32rem);
+  }
+}
+
+/* =========================================================
+   MOBILE LANDSCAPE PROMPT COMPACT FIT
+   ========================================================= */
+@media (max-height: 500px) {
+  .entrance-hit-button {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .entrance-prompt-stack {
+    gap: 0.25rem;
+    padding: 6px 16px;
+  }
+
+  .entrance-kicker {
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+  }
+
+  .entrance-cta {
+    font-size: 0.84rem;
+    letter-spacing: 0.18em;
+  }
+
+  .entrance-sub {
+    font-size: 0.78rem;
+  }
+}
+
+/* =========================================================
+   GRACEFUL CSS-3D FALLBACK GATES (WHEN WEBGL UNAVAILABLE)
+   ========================================================= */
+.css-gates-fallback {
+  position: absolute;
+  inset: 0;
+  background: #050505;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+}
+
+.css-light-seam {
+  position: absolute;
+  width: 6px;
+  height: 76dvh;
+  background: linear-gradient(180deg, transparent, #fff2c6, #f4d58a, transparent);
+  box-shadow: 0 0 28px 8px rgba(244, 213, 138, 0.5);
+  opacity: 0.25;
+  transition: opacity 0.8s ease, transform 2.2s ease;
+}
+
+.css-light-seam.seam-open {
+  opacity: 0.9;
+  transform: scaleX(24);
+}
+
+.css-gates-stage {
+  position: relative;
+  width: min(86vw, 540px);
+  height: min(76dvh, 720px);
+  display: flex;
+  transform-style: preserve-3d;
+}
+
+.css-door {
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(160deg, #3b2a14 0%, #1d1409 55%, #49351c 100%);
+  border: 5px solid #d6a64b;
+  box-shadow: inset 0 0 26px rgba(5, 5, 5, 0.85);
+  transition: transform 2.6s cubic-bezier(0.45, 0.05, 0.22, 1), opacity 0.9s ease 1.8s;
+}
+
+.css-door-left {
+  transform-origin: left center;
+  border-right-width: 2px;
+}
+
+.css-door-right {
+  transform-origin: right center;
+  border-left-width: 2px;
+}
+
+.css-door-left.door-open-left {
+  transform: rotateY(-108deg);
+  opacity: 0;
+}
+
+.css-door-right.door-open-right {
+  transform: rotateY(108deg);
+  opacity: 0;
+}
+
+.css-gate-medallion {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(46%, 220px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, #181108 0%, #050505 100%);
+  border: 4px solid #d6a64b;
+  box-shadow: 0 0 24px rgba(214, 166, 75, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  transition: opacity 0.7s ease;
+}
+
+.css-gate-medallion img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.css-gate-medallion.medallion-fade {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entrance-cta {
+    animation: none;
+  }
+
+  .css-door {
+    transition-duration: 0.9s;
+  }
+}

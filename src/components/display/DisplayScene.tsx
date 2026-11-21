@@ -15,6 +15,12 @@ import { AuroraLogoWriter } from './AuroraLogoWriter';
 import { CompositionLayers } from './CompositionLayers';
 import { FireTypewriter } from './FireTypewriter';
 import { FullscreenToggle } from './FullscreenToggle';
+import {
+  detectWebGLSupport,
+  GatesOfOlympus,
+  useEntranceController,
+} from '../entrance/GatesOfOlympus';
+import { GoldenGateScene } from '../entrance/GoldenGateScene';
 import '../../styles/display.css';
 
 function detectLowPowerDevice(): boolean {
@@ -31,7 +37,9 @@ export function DisplayScene() {
   const soundConfigRef = useRef(config.sound);
   const reducedMotion = useReducedMotion();
   const [lowPowerMode] = useState<boolean>(() => detectLowPowerDevice());
+  const [webglSupported] = useState<boolean>(() => detectWebGLSupport());
 
+  const { entranceState, triggerEnter } = useEntranceController(soundConfigRef);
   const [phase, setPhase] = useState<InvitationPhase>('EXTINGUISHED');
   const [burstKey, setBurstKey] = useState(0);
   const phaseTimersRef = useRef<number[]>([]);
@@ -115,6 +123,7 @@ export function DisplayScene() {
   }, []);
 
   const handleTouchLamp = useCallback(() => {
+    if (entranceState !== 'INVITATION_VISIBLE') return;
     if (phase !== 'EXTINGUISHED') return;
     clearPhaseTimers();
 
@@ -136,7 +145,7 @@ export function DisplayScene() {
       setPhase('WRITING_LOGO');
     }, 1350);
     phaseTimersRef.current.push(t1);
-  }, [phase, clearPhaseTimers, controller, reducedMotion]);
+  }, [entranceState, phase, clearPhaseTimers, controller, reducedMotion]);
 
   const handleWriteTick = useCallback(() => {
     audioEngine.playWritingSpark(soundConfigRef.current);
@@ -169,46 +178,56 @@ export function DisplayScene() {
       {/* Subtle warm royal atmospheric backdrop */}
       <div className="royal-atmosphere-bg" aria-hidden="true" />
 
-      {/* Fixed WebGL 3D Ceremonial Lamp & Flame Layer */}
-      <div className="webgl-canvas-layer">
-        <Canvas
-          dpr={lowPowerMode ? [1, 1.5] : [1, 2]}
-          camera={{ position: [0, 0, 6], fov: 45, near: 0.1, far: 50 }}
-          gl={{
-            antialias: !lowPowerMode,
-            powerPreference: 'high-performance',
-            alpha: true,
-            toneMapping: THREE.ACESFilmicToneMapping,
-            toneMappingExposure: 1.0,
-          }}
-        >
-          <Suspense fallback={null}>
-            <CompositionLayers
-              controller={controller}
-              createSparkId={createSparkId}
-              phase={phase}
-              onTouchLamp={handleTouchLamp}
-            />
-          </Suspense>
-          <EffectComposer multisampling={0}>
-            <Bloom
-              intensity={lowPowerMode ? 0.3 : 0.38}
-              luminanceThreshold={0.9}
-              luminanceSmoothing={0.25}
-              mipmapBlur
-            />
-          </EffectComposer>
-        </Canvas>
-      </div>
+      {/* Fixed WebGL 3D Scene (Single Shared Context: Ceremonial Lamp + Gates of Olympus) */}
+      {webglSupported && (
+        <div className="webgl-canvas-layer">
+          <Canvas
+            dpr={lowPowerMode ? [1, 1.5] : [1, 2]}
+            camera={{ position: [0, 0, 6], fov: 45, near: 0.1, far: 50 }}
+            gl={{
+              antialias: !lowPowerMode,
+              powerPreference: 'high-performance',
+              alpha: true,
+              toneMapping: THREE.ACESFilmicToneMapping,
+              toneMappingExposure: 1.0,
+            }}
+          >
+            <Suspense fallback={null}>
+              <CompositionLayers
+                controller={controller}
+                createSparkId={createSparkId}
+                phase={phase}
+                onTouchLamp={handleTouchLamp}
+              />
+              <GoldenGateScene entranceState={entranceState} />
+            </Suspense>
+            <EffectComposer multisampling={0}>
+              <Bloom
+                intensity={lowPowerMode ? 0.3 : 0.38}
+                luminanceThreshold={0.9}
+                luminanceSmoothing={0.25}
+                mipmapBlur
+              />
+            </EffectComposer>
+          </Canvas>
+        </div>
+      )}
 
-      {/* Subtle Floating Golden Dust Overlay */}
+      {/* Subtle Floating Golden Dust Overlay (active during Gates awakening & Invitation) */}
       <AmbientSparksOverlay
-        active={phase !== 'EXTINGUISHED'}
+        active={entranceState !== 'INVITATION_VISIBLE' || phase !== 'EXTINGUISHED'}
         burstKey={burstKey}
         lowPowerMode={lowPowerMode}
       />
 
-      {/* Discreet Fullscreen Presentation Control (independent of content flow) */}
+      {/* Phase 03: The Gates of Olympus Entrance Overlay & CSS Fallback */}
+      <GatesOfOlympus
+        entranceState={entranceState}
+        webglSupported={webglSupported}
+        onEnter={triggerEnter}
+      />
+
+      {/* Discreet Fullscreen Presentation Control (independent of entrance & content flow) */}
       <FullscreenToggle />
 
       {/* Responsive Full-Height Invitation Composition Stage */}

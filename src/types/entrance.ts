@@ -1,0 +1,7 @@
+export type EntranceState =
+  | 'INITIALIZING'
+  | 'ENTRANCE_READY'
+  | 'ENTERING'
+  | 'DOORS_OPENING'
+  | 'LIGHT_REVEAL'
+  | 'INVITATION_VISIBLE';
