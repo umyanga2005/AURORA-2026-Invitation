@@ -8,7 +8,7 @@ export const DEFAULT_INVITATION_TEXT: InvitationTextConfig = {
   logoSub: 'MMXXVI',
   headerLine1: 'The English Literary Association of RNCOE',
   headerLine2: 'cordially invites you to',
-  eventTitle: 'The 22nd Annual English Day',
+  eventTitle: 'The English Day - 2026',
   dateLabel: 'Date',
   dateValue: '2026.11.30',
   timeLabel: 'Time',
@@ -37,8 +37,12 @@ function loadConfig(): InvitationConfig {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return structuredClone(DEFAULT_INVITATION_CONFIG);
     const parsed = JSON.parse(raw) as Partial<InvitationConfig>;
+    const mergedText: InvitationTextConfig = { ...DEFAULT_INVITATION_TEXT, ...(parsed.text ?? {}) };
+    if (mergedText.eventTitle.trim().toLowerCase() === 'the 22nd annual english day') {
+      mergedText.eventTitle = DEFAULT_INVITATION_TEXT.eventTitle;
+    }
     return {
-      text: { ...DEFAULT_INVITATION_TEXT, ...(parsed.text ?? {}) },
+      text: mergedText,
       sound: { ...DEFAULT_SOUND_CONFIG, ...(parsed.sound ?? {}) },
     };
   } catch {
